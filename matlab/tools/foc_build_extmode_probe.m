@@ -32,8 +32,7 @@ new_system(mdl);
 set_param(mdl, 'HardwareBoard', 'TI F2838x');
 cs = getActiveConfigSet(mdl);
 set_param(mdl, 'SolverType', 'Fixed-step', 'Solver', 'FixedStepDiscrete', 'FixedStep', '1e-3', 'StopTime', 'inf');
-setCT(cs, 'Clocking.UseInternalOsc', 1);
-setCT(cs, 'Clocking.OSCCLK', 10);
+foc_probe_clock(cs);   % Takt wie app_speed (200 MHz)
 setCT(cs, 'SCI_A.PinAssignment_Tx', 'GPIO84');
 setCT(cs, 'SCI_A.PinAssignment_Rx', 'GPIO85');
 setCT(cs, 'SCI_A.UserBaudRate', 115200);

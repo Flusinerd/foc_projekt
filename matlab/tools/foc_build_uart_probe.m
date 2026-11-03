@@ -29,8 +29,7 @@ set_param(mdl, 'HardwareBoard', 'TI F2838x');
 cs = getActiveConfigSet(mdl);
 set_param(mdl, 'SolverType', 'Fixed-step', 'Solver', 'FixedStepDiscrete', 'FixedStep', '1e-3', ...
     'StopTime', 'inf', 'ExtMode', 'off');
-codertarget.data.setParameterValue(cs, 'Clocking.UseInternalOsc', 1);
-codertarget.data.setParameterValue(cs, 'Clocking.OSCCLK', 10);
+foc_probe_clock(cs);   % Takt wie app_speed (200 MHz)
 codertarget.data.setParameterValue(cs, 'SCI_A.PinAssignment_Tx', txPin);
 codertarget.data.setParameterValue(cs, 'SCI_A.PinAssignment_Rx', rxPin);
 if ~strcmp(codertarget.data.getParameterValue(cs, 'SCI_A.PinAssignment_Tx'), txPin) || ...
