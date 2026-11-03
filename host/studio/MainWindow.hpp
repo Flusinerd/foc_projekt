@@ -13,6 +13,7 @@ public:
     explicit MainWindow(DriveController* ctl, QWidget* parent = nullptr);
 
     void startDemo();
+    void showTab(int index);
 
 private:
     void openConnectionDialog();

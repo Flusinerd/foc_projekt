@@ -31,11 +31,15 @@ int main(int argc, char** argv)
     QCommandLineOption delay(QStringLiteral("delay"), QStringLiteral("Screenshot delay in ms (default 3000)."),
                              QStringLiteral("ms"), QStringLiteral("3000"));
     QCommandLineOption size(QStringLiteral("size"), QStringLiteral("Window size WxH."), QStringLiteral("WxH"));
-    cli.addOptions({demo, shot, delay, size});
+    QCommandLineOption tab(QStringLiteral("tab"), QStringLiteral("Open page <n> (0 = overview)."), QStringLiteral("n"));
+    QCommandLineOption expert(QStringLiteral("expert"), QStringLiteral("Start in expert mode (documentation screenshots)."));
+    cli.addOptions({demo, shot, delay, size, tab, expert});
     cli.process(app);
 
     DriveController ctl;
+    ctl.setExpertMode(cli.isSet(expert));
     MainWindow win(&ctl);
+    if (cli.isSet(tab)) QTimer::singleShot(0, &win, [&win, &cli, tab] { win.showTab(cli.value(tab).toInt()); });
     if (cli.isSet(size)) {
         const QStringList wh = cli.value(size).split(QLatin1Char('x'));
         if (wh.size() == 2) win.resize(wh[0].toInt(), wh[1].toInt());

@@ -31,6 +31,15 @@ public:
 
     fochost::Device& device() { return dev_; }
 
+    /// Expert mode: editing parameters, full scope, calibrations, virtual drive settings.
+    bool expertMode() const { return expert_; }
+    void setExpertMode(bool on)
+    {
+        if (on == expert_) return;
+        expert_ = on;
+        Q_EMIT expertModeChanged(on);
+    }
+
     // snapshot, refreshed every poll
     const fochost::DriveStatus& status() const { return status_; }
     const fochost::DriveInfo& info() const { return info_; }
@@ -42,6 +51,7 @@ public:
 
 Q_SIGNALS:
     void connectionChanged(bool connected);
+    void expertModeChanged(bool on);
     void updated();
 
 private:
@@ -61,6 +71,7 @@ private:
     float lastRef_ = 0.0f;
     unsigned refSerial_ = 0;
 
+    bool expert_ = false;
     bool demo_ = false;
     int demoPhase_ = -1;
     qint64 demoT0_ = 0;

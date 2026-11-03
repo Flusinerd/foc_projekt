@@ -4,6 +4,7 @@
 #include "ControlPanel.hpp"
 #include "DashboardPage.hpp"
 #include "DriveController.hpp"
+#include "ParametersPage.hpp"
 
 #include <QAction>
 #include <QApplication>
@@ -76,6 +77,7 @@ MainWindow::MainWindow(DriveController* ctl, QWidget* parent) : QMainWindow(pare
     ov->addWidget(new DashboardPage(ctl_), 3);
     ov->addWidget(new ControlPanel(ctl_), 2);
     tabs_->addTab(overview, tr("&Overview"));
+    tabs_->addTab(new ParametersPage(ctl_), tr("&Parameters"));
     setCentralWidget(tabs_);
 
     connLabel_ = new QLabel;
@@ -103,6 +105,11 @@ void MainWindow::startDemo()
 {
     QString err;
     if (!ctl_->startDemo(err)) QMessageBox::warning(this, tr("Demo"), err);
+}
+
+void MainWindow::showTab(int index)
+{
+    if (index >= 0 && index < tabs_->count()) tabs_->setCurrentIndex(index);
 }
 
 void MainWindow::onConnectionChanged(bool connected)

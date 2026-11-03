@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.20)
+﻿cmake_minimum_required(VERSION 3.20)
 project(foc_framework VERSION 0.1.0 LANGUAGES C CXX)
 
 option(FOC_BUILD_GUI     "Build FOC Studio (Qt 6 Widgets, set CMAKE_PREFIX_PATH to the Qt kit)" ON)
@@ -9,6 +9,10 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
     set(CMAKE_BUILD_TYPE Release)
+endif()
+
+if(FOC_BUILD_TESTS)
+    enable_testing()   # before the subdirectories, they add tests too
 endif()
 
 add_subdirectory(protocol)
@@ -50,7 +54,6 @@ endif()
 
 # --- tests -----------------------------------------------------------------------------
 if(FOC_BUILD_TESTS)
-    enable_testing()
     add_executable(test_protocol host/tests/test_protocol.cpp)
     target_link_libraries(test_protocol PRIVATE fochost focp_target)
     add_test(NAME protocol COMMAND test_protocol)
