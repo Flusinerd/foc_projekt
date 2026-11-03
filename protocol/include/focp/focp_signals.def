@@ -1,0 +1,30 @@
+/*
+ * FOCP telemetry signal table - single source of truth for firmware and host.
+ *
+ * X(IDX, ID, NAME, UNIT, SCALE, DESC)
+ *   On the wire each sample is int16: physical = raw * SCALE.
+ *   SCALE is chosen so the expected range fits into +/-32767.
+ *   ID is the 8-bit wire ID used in TELEM_CFG. Never reuse an ID.
+ */
+X(IA,         1,  "ia",         "A",    0.001f,  "Phasenstrom a")
+X(IB,         2,  "ib",         "A",    0.001f,  "Phasenstrom b")
+X(IC,         3,  "ic",         "A",    0.001f,  "Phasenstrom c")
+X(ID,         4,  "id",         "A",    0.001f,  "d-Strom")
+X(IQ,         5,  "iq",         "A",    0.001f,  "q-Strom")
+X(ID_REF,     6,  "id_ref",     "A",    0.001f,  "d-Strom Soll")
+X(IQ_REF,     7,  "iq_ref",     "A",    0.001f,  "q-Strom Soll")
+X(UD,         8,  "ud",         "V",    0.002f,  "d-Spannung")
+X(UQ,         9,  "uq",         "V",    0.002f,  "q-Spannung")
+X(THETA_EL,   10, "theta_el",   "deg",  0.011f,  "verwendeter el. Winkel")
+X(SPEED,      11, "speed",      "rpm",  0.25f,   "Drehzahl (mech.)")
+X(SPEED_REF,  12, "speed_ref",  "rpm",  0.25f,   "Drehzahl Soll (nach Rampe)")
+X(POS,        13, "pos",        "deg",  0.1f,    "Lage mech. (mehrturnig, +/-3276 deg)")
+X(POS_REF,    14, "pos_ref",    "deg",  0.1f,    "Lage Soll")
+X(UDC,        15, "udc",        "V",    0.01f,   "Zwischenkreisspannung")
+X(TEMP,       16, "temp",       "degC", 0.01f,   "Temperatur Leistungsstufe")
+X(HALL_STATE, 17, "hall_state", "",     1.0f,    "Hall-Zustand (C|B|A)")
+X(THETA_HALL, 18, "theta_hall", "deg",  0.011f,  "Winkel aus Hall (interpoliert)")
+X(THETA_OBS,  19, "theta_obs",  "deg",  0.011f,  "Winkel aus Beobachter")
+X(SPEED_OBS,  20, "speed_obs",  "rpm",  0.25f,   "Drehzahl aus Beobachter")
+X(DUTY_A,     21, "duty_a",     "",     0.0001f, "Tastgrad Phase a (0..1)")
+X(TORQUE,     22, "torque",     "Nm",   0.0005f, "Moment (berechnet)")

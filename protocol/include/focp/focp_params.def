@@ -1,0 +1,71 @@
+/*
+ * FOCP parameter table - single source of truth for firmware and host.
+ *
+ * X(IDX, ID, NAME, TYPE, UNIT, MIN, MAX, DEFAULT, FLAGS, DESC)
+ *   IDX     C identifier, becomes FOCP_P_<IDX>
+ *   ID      16-bit wire ID (high byte = group). Never reuse an ID.
+ *   TYPE    FOCP_T_F32 | FOCP_T_U16 | FOCP_T_BOOL | FOCP_T_ENUM
+ *   FLAGS   FOCP_F_RO (read only), FOCP_F_LOCK (only writable while not running),
+ *           FOCP_F_SIM (only used by the virtual drive)
+ *
+ * Defaults: ECI 63.60 (24 V) datasheet + DRV8300 board. Motor values marked
+ * "DS" are derived from the datasheet and must be replaced by measured values (Phase P4).
+ */
+
+/* --- Group 0x01: Motor ---------------------------------------------------------------- */
+X(MOTOR_POLE_PAIRS, 0x0100, "motor.pole_pairs", FOCP_T_U16, "",       1,      32,     4,        FOCP_F_LOCK, "Polpaarzahl")
+X(MOTOR_RS,         0x0101, "motor.Rs",         FOCP_T_F32, "Ohm",    0.0f,   10.0f,  0.0225f,  FOCP_F_LOCK, "Strangwiderstand (DS: 0,045 Ohm Klemme/2)")
+X(MOTOR_LD,         0x0102, "motor.Ld",         FOCP_T_F32, "H",      1e-7f,  1e-1f,  3.825e-5f, FOCP_F_LOCK, "d-Induktivitaet (DS: 76,5 uH Klemme/2)")
+X(MOTOR_LQ,         0x0103, "motor.Lq",         FOCP_T_F32, "H",      1e-7f,  1e-1f,  3.825e-5f, FOCP_F_LOCK, "q-Induktivitaet (DS: 76,5 uH Klemme/2)")
+X(MOTOR_PSI,        0x0104, "motor.psi_pm",     FOCP_T_F32, "Vs",     1e-5f,  1.0f,   0.00587f, FOCP_F_LOCK, "PM-Fluss (DS: Ke 4,26 V/krpm, verkettet Scheitel)")
+X(MOTOR_J,          0x0105, "motor.J",          FOCP_T_F32, "kgm2",   1e-7f,  1.0f,   5.7e-5f,  FOCP_F_LOCK, "Rotortraegheit (DS)")
+X(MOTOR_B,          0x0106, "motor.B",          FOCP_T_F32, "Nms",    0.0f,   1.0f,   2.0e-5f,  FOCP_F_LOCK, "viskose Reibung (geschaetzt)")
+X(MOTOR_I_RATED,    0x0107, "motor.I_rated",    FOCP_T_F32, "A",      0.1f,   200.0f, 17.6f,    FOCP_F_LOCK, "Nennstrom")
+X(MOTOR_N_MAX,      0x0108, "motor.n_max",      FOCP_T_F32, "rpm",    10.0f,  60000.0f, 6000.0f, FOCP_F_LOCK, "maximale Drehzahl")
+
+/* --- Group 0x02: Inverter / protection ------------------------------------------------ */
+X(INV_UDC_NOM,      0x0200, "inv.Udc_nom",      FOCP_T_F32, "V",      1.0f,   100.0f, 24.0f,    FOCP_F_LOCK, "Nenn-Zwischenkreisspannung")
+X(INV_I_MAX,        0x0201, "inv.I_max",        FOCP_T_F32, "A",      0.1f,   200.0f, 25.0f,    0,           "Software-Ueberstromschwelle (Betrag)")
+X(INV_UDC_MIN,      0x0202, "inv.Udc_min",      FOCP_T_F32, "V",      0.0f,   100.0f, 17.0f,    0,           "Unterspannungsschwelle")
+X(INV_UDC_MAX,      0x0203, "inv.Udc_max",      FOCP_T_F32, "V",      1.0f,   100.0f, 30.0f,    0,           "Ueberspannungsschwelle")
+X(INV_T_MAX,        0x0204, "inv.T_max",        FOCP_T_F32, "degC",   0.0f,   150.0f, 80.0f,    0,           "Uebertemperatur Leistungsstufe")
+X(INV_F_PWM,        0x0205, "inv.f_pwm",        FOCP_T_F32, "Hz",     1000.0f, 100000.0f, 20000.0f, FOCP_F_RO, "PWM- und Stromreglerfrequenz")
+
+/* --- Group 0x03: Control ------------------------------------------------------------------ */
+X(CTRL_MODE,        0x0300, "ctrl.mode",        FOCP_T_ENUM, "",      0,      4,      2,        FOCP_F_LOCK, "0=Aus 1=Moment 2=Drehzahl 3=Lage 4=Open-Loop I/f")
+X(CTRL_POS_SENSOR,  0x0301, "ctrl.pos_sensor",  FOCP_T_ENUM, "",      0,      2,      0,        FOCP_F_LOCK, "0=Hall 1=Sensorlos 2=Hybrid")
+X(CUR_KP,           0x0310, "cur.Kp",           FOCP_T_F32, "V/A",    0.0f,   100.0f, 0.255f,   0,           "Stromregler P (Betragsoptimum, sigma = 1,5 Ts)")
+X(CUR_KI,           0x0311, "cur.Ki",           FOCP_T_F32, "V/(As)", 0.0f,   1e6f,   150.0f,   0,           "Stromregler I (Kp/Tn, Tn = L/R)")
+X(CUR_ID_REF,       0x0312, "cur.Id_ref",       FOCP_T_F32, "A",      -50.0f, 50.0f,  0.0f,     0,           "d-Strom-Sollwert (Feldschwaechung spaeter)")
+X(SPD_KP,           0x0320, "spd.Kp",           FOCP_T_F32, "A/rpm",  0.0f,   10.0f,  0.0053f,  0,           "Drehzahlregler P (5 Hz, J Motor)")
+X(SPD_KI,           0x0321, "spd.Ki",           FOCP_T_F32, "A/(rpm s)", 0.0f, 100.0f, 0.042f,   0,           "Drehzahlregler I (Tn = 4/wc)")
+X(SPD_RAMP,         0x0322, "spd.ramp",         FOCP_T_F32, "rpm/s",  1.0f,   1e6f,   5000.0f,  0,           "Sollwertrampe")
+X(SPD_IQ_MAX,       0x0323, "spd.Iq_max",       FOCP_T_F32, "A",      0.0f,   200.0f, 10.0f,    0,           "Strombegrenzung motorisch")
+X(SPD_IQ_MIN,       0x0324, "spd.Iq_min",       FOCP_T_F32, "A",      -200.0f, 0.0f,  -5.0f,    0,           "Strombegrenzung generatorisch (0 = nicht bremsen)")
+X(POS_KP,           0x0330, "pos.Kp",           FOCP_T_F32, "rpm/deg", 0.0f,  1000.0f, 1.0f,    0,           "Lageregler P (1 rpm/deg = 1 Hz; <= 1/5 der Drehzahlbandbreite)")
+X(POS_V_MAX,        0x0331, "pos.v_max",        FOCP_T_F32, "rpm",    0.0f,   60000.0f, 1000.0f, 0,          "Maximale Verfahrdrehzahl")
+X(POS_DEADBAND,     0x0332, "pos.deadband",     FOCP_T_F32, "deg",    0.0f,   90.0f,  8.0f,     0,           "Totband Lage (Hall: > halbe Hall-Stufe = 7,5 deg bei p=4)")
+X(OL_I,             0x0340, "ol.I",             FOCP_T_F32, "A",      0.0f,   50.0f,  3.0f,     0,           "Open-Loop I/f: Strombetrag")
+X(OL_ACC,           0x0341, "ol.acc",           FOCP_T_F32, "rpm/s",  1.0f,   1e5f,   500.0f,   0,           "Open-Loop I/f: Hochlauframpe")
+
+/* --- Group 0x04: Hall sensor -------------------------------------------------------------- */
+X(HALL_OFFSET,      0x0400, "hall.offset",      FOCP_T_F32, "deg",    -180.0f, 180.0f, 0.0f,    0,           "Hall-Offset elektrisch (Kalibrierung P4)")
+X(HALL_N_MIN,       0x0401, "hall.n_min",       FOCP_T_F32, "rpm",    0.0f,   10000.0f, 20.0f,  0,           "unterhalb: keine Interpolation")
+
+/* --- Group 0x05: Sensorless observer ------------------------------------------------------ */
+X(OBS_N_SWITCH,     0x0500, "obs.n_switch",     FOCP_T_F32, "rpm",    0.0f,   60000.0f, 500.0f, 0,           "Hybrid: Umschaltdrehzahl Hall -> Beobachter")
+X(OBS_N_HYST,       0x0501, "obs.n_hyst",       FOCP_T_F32, "rpm",    0.0f,   10000.0f, 100.0f, 0,           "Hybrid: Hysterese")
+X(OBS_PLL_BW,       0x0502, "obs.pll_bw",       FOCP_T_F32, "Hz",     1.0f,   5000.0f, 100.0f,  0,           "Bandbreite Winkel-PLL")
+
+/* --- Group 0x0C: Communication ------------------------------------------------------------ */
+X(COMM_TIMEOUT,     0x0C00, "comm.timeout_ms",  FOCP_T_U16, "ms",     0,      60000,  500,      0,           "Heartbeat-Timeout im Betrieb (0 = aus)")
+
+/* --- Group 0x0E: Virtual drive only ------------------------------------------------------- */
+X(SIM_T_LOAD,       0x0E00, "sim.T_load",       FOCP_T_F32, "Nm",     0.0f,   10.0f,  0.0f,     FOCP_F_SIM,  "Simulation: Lastmoment (wirkt gegen die Bewegung)")
+X(SIM_UDC,          0x0E01, "sim.Udc",          FOCP_T_F32, "V",      0.0f,   100.0f, 24.0f,    FOCP_F_SIM,  "Simulation: Zwischenkreisspannung")
+X(SIM_T_FRIC,       0x0E03, "sim.T_fric",       FOCP_T_F32, "Nm",     0.0f,   1.0f,   0.03f,    FOCP_F_SIM,  "Simulation: Coulomb-Reibung (DS: Leerlaufstrom 0,9 A)")
+X(SIM_HALL_NOISE,   0x0E02, "sim.hall_noise",   FOCP_T_F32, "",       0.0f,   1.0f,   0.0f,     FOCP_F_SIM,  "Simulation: Wahrscheinlichkeit Fehlflanke je Schritt")
+
+/* --- Group 0x0F: System ------------------------------------------------------------------- */
+X(SYS_FW_VERSION,   0x0F00, "sys.fw_version",   FOCP_T_U16, "",       0,      65535,  1,        FOCP_F_RO,   "Firmware-Version (major*256+minor)")
+X(SYS_ISR_LOAD,     0x0F01, "sys.isr_load",     FOCP_T_F32, "%",      0.0f,   100.0f, 0.0f,     FOCP_F_RO,   "Auslastung Strom-ISR")

@@ -1,0 +1,6 @@
+build/
+*.ini
+scope.csv
+.vscode/
+.vs/
+out/
