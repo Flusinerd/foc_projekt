@@ -20,6 +20,7 @@ param(
     [int]$SendId = -1,
     [string]$SendData = '',          # Hex-Bytes, z. B. "34 12"
     [double]$AfterSendSec = 2,
+    [switch]$BusErrors,              # Busfehler-Rahmen melden (GS_CAN_MODE_BERR_REPORTING)
     [string]$InterfaceGuid = '{c15b4308-04d3-11e6-b3ea-6057189e6443}'
 )
 
@@ -96,7 +97,8 @@ try {
     $prop = 1; $ps2 = [int][Math]::Max(1, [Math]::Round($tq * 0.125)); $ps1 = $tq - 1 - $prop - $ps2
     "Adaptertakt {0} Hz -> BRP={1}, Tq={2} (prop {3}, ps1 {4}, ps2 {5}), Abtastpunkt {6:P1}" -f $fclk, $brp, $tq, $prop, $ps1, $ps2, ((1 + $prop + $ps1) / $tq)
     [void][GsUsb]::Ctrl($false, 1, 0, (U32 $prop, $ps1, $ps2, 1, $brp), 20)  # BITTIMING
-    [void][GsUsb]::Ctrl($false, 2, 0, (U32 1, 0), 8)                         # MODE start, normal
+    $modeFlags = if ($BusErrors) { 0x1000 } else { 0 }
+    [void][GsUsb]::Ctrl($false, 2, 0, (U32 1, $modeFlags), 8)                 # MODE start (Flags: 0x1000 = Busfehler melden)
     [GsUsb]::SetTimeout(200)
 
     $stats = @{}
