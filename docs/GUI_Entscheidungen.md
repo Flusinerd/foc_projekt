@@ -21,7 +21,41 @@ Umstellung von FOC Studio vom Entwicklerwerkzeug (Dear ImGui) auf ein Endanwende
 
 ## 3. Plot-Bibliothek: Qwt oder JKQtPlotter
 
-*Offen. Der Benchmark (8 Signale, je 20 000 Punkte im Fenster, 30 Bilder/s, laufend nachgeschoben) folgt, sobald Qt und MSVC installiert sind.*
+**Entscheidung: Qwt 6.3.0**, Kurven mit `QwtPlotCurve::FilterPointsAggressive`.
+
+### Benchmark
+
+Programm: `host/bench/plotbench/` (eigenständiges CMake-Projekt, beide Bibliotheken per FetchContent auf festen Tags). Last: 8 Signale, je 20 000 Punkte im Fenster (f_s = 10 kHz, 2 s), Timer 30 Bilder/s, je Bild ca. 333 neue Punkte pro Signal. Jedes Bild wird im Timer-Slot synchron gezeichnet, die Bildzeit umfasst Datenaktualisierung, Replot und Paint. Fenster 1600 × 900, Messung 10 s nach 15 Bildern Vorlauf. Optionen: `--plots 1|8` (Signale auf 1 oder 8 Plots verteilt), `--aa` (Antialiasing der Kurven), `--fast` (Qwt: `FilterPointsAggressive`; JKQtPlotter: ohne Gitter, die Version 4.0 hat keine Punktreduktion).
+
+Rechner: Intel Core i7-10700, Intel UHD 630, Qt 6.12.0 MSVC 2022 64-bit, Release, 2026-11-03.
+
+| Bibliothek | Plots | fast | AA | Bilder/s | Bildzeit Mittel | p95 | CPU |
+|---|---|---|---|---|---|---|---|
+| Qwt | 1 | – | – | 23,1 | 43,2 ms | 49,7 ms | 99 % |
+| Qwt | 1 | ✓ | – | **30,3** | **24,4 ms** | 29,3 ms | 44 % |
+| Qwt | 1 | – | ✓ | 18,0 | 55,4 ms | 61,6 ms | 98 % |
+| Qwt | 1 | ✓ | ✓ | 30,3 | 30,7 ms | 34,1 ms | 61 % |
+| Qwt | 8 | – | – | 22,4 | 44,7 ms | 47,8 ms | 97 % |
+| Qwt | 8 | ✓ | – | **30,4** | **30,6 ms** | 33,0 ms | 57 % |
+| Qwt | 8 | – | ✓ | 19,5 | 51,4 ms | 61,6 ms | 98 % |
+| Qwt | 8 | ✓ | ✓ | 29,9 | 33,2 ms | 36,7 ms | 89 % |
+| JKQtPlotter | 1 | – | – | 0,5 | 2079 ms | 2082 ms | 64 % |
+| JKQtPlotter | 1 | ✓ | – | 0,5 | 2088 ms | 2095 ms | 69 % |
+| JKQtPlotter | 1 | – | ✓ | 0,2 | 5708 ms | 5698 ms | 7 % |
+
+Die Messreihe wurde nach diesen Läufen abgebrochen. JKQtPlotter lag in allen Läufen um den Faktor 70–200 über dem Zeitbudget von 33 ms, die übrigen Läufe hätten daran nichts geändert.
+
+### Begründung
+
+1. **Leistung:** Nur Qwt erreicht die geforderten 30 Bilder/s, und das nur mit `FilterPointsAggressive` (Reduktion auf Min/Max je Pixelspalte). Ohne diese Option schafft auch Qwt nur 18–23 Bilder/s bei voller Auslastung eines Kerns. JKQtPlotter 4.0.3 zeichnet jeden Punkt und braucht 2 s pro Bild.
+2. **Einbindung in CMake:** JKQtPlotter bringt eigenes CMake mit, baut aber vier Bibliotheken (Common, MathText inkl. XITS-Schriften, FastPlotter, Plotter) und braucht zusätzlich Qt Svg, Xml und OpenGL. Qwt hat upstream nur qmake. Ein eigenes Ziel in CMake sind aber ca. 10 Zeilen (Quellen per Glob, ohne SVG/OpenGL/Polar, `QWT_NO_SVG`, `QWT_NO_OPENGL`), Abhängigkeiten nur Widgets, PrintSupport, Concurrent. Beides ist reproduzierbar per FetchContent auf festem Tag.
+3. **Lizenz:** Qwt License 1.0 = LGPL 2.1 mit Ausnahmen; statisches Linken ausdrücklich erlaubt. JKQtPlotter LGPL 2.1. Beide wären zulässig.
+
+### Folgerungen für die GUI
+
+- Kurven immer mit `FilterPointsAggressive` und `setRawSamples()` (kein Kopieren).
+- Antialiasing standardmäßig aus; mit 1 Plot kostet es ca. 25 % mehr Bildzeit, bei 8 Plots wird die CPU-Last grenzwertig.
+- Bei 8 Plots liegt das p95 knapp über 33 ms. Im Scope wird deshalb nur der sichtbare Tab neu gezeichnet, und die Bildrate darf bei vielen Plots auf 20 Bilder/s fallen.
 
 ## 4. CANable-Transport (gs_usb)
 
