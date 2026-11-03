@@ -1,5 +1,20 @@
 # External Mode – Machbarkeit und erster Test (2026-11-03) – ANGEHALTEN (Linker, Prüfmodell)
 
+## Nachtrag 3: nach Power-Cycle – Target antwortet nicht auf XCP über COM4
+
+- Der Mensch hat die Steuerplatine aus- und eingeschaltet; die **Heartbeat-LED (GPIO56) blinkt** mit 2 Hz. Das Prüfmodell läuft also aus dem Flash.
+- `foc_run_extmode_probe(5, false)`: `connect` ohne Fehler, Status bleibt `stopped`, keine Daten.
+- **Direkter Test der seriellen Strecke ohne Simulink:** Ein XCP-CONNECT-Rahmen (Länge, Zähler, `FF 00`, Prüfsumme; Format aus `xcp_frame_serial.c`) wurde in beiden Byte-Reihenfolgen über COM4 gesendet, bei 9600, 19200, 38400, 57600, 115200, 230400, 460800, 921600, 1M, 2M, 3M und 5M Baud. **Bei keiner Rate kam ein einziges Byte zurück.**
+- **Bewertung:** Ein Taktfehler würde bei einer der Raten wenigstens fehlerhafte Bytes liefern. Daher wahrscheinlicher:
+  1. Die UART-Strecke FT2232 Kanal B ↔ SCIA (GPIO84 TX / GPIO85 RX) ist auf dieser Platine nicht durchverbunden oder anders verdrahtet. Laut `docs/Hardware-Ueberblick_Frequenzumrichter.md` enthält `Erratas.xlsx` Änderungen an der FT2232HL-Beschaltung, die Datei liegt nicht vor.
+  2. SCIA wird im Prüfmodell nicht initialisiert oder ist auf andere Pins gemultiplext. Zu prüfen im generierten Code: `GPAMUX/GPCMUX` für GPIO84/85, `SciaRegs`.
+- **Was funktioniert:** JTAG über den XDS100. Flashen und Starten gehen zuverlässig. Damit wäre ein **CCS-Debugger (Expressions-Fenster)** sofort als Beobachtungsweg nutzbar, unabhängig vom UART.
+
+**Vorschlag:**
+a) Mensch: an GPIO84 (TX) und GPIO85 (RX) bzw. an den FT2232-Pins mit dem Oszilloskop prüfen, ob beim Senden von COM4 aus ein Signal an GPIO85 ankommt. `Erratas.xlsx` beim Institut anfragen.
+b) Agent (nach Freigabe): UART-Grundtest mit einem Mini-Modell, das über SCI_A zyklisch ein festes Byte sendet und auf COM4 mitgelesen wird. Das trennt die Hardwarestrecke von XCP.
+c) Für Schritt 8 als Beobachtungsweg zunächst den CCS-Debugger über JTAG verwenden.
+
 ## Nachtrag 2: Prüfmodell v2 gebaut und geflasht, External-Mode-Verbindung liefert noch keine Daten
 
 - **Prüfmodell v2** (`foc_build_extmode_probe`, frisches Modell, Blöcke aus `c2838xlib`, Takt intern 10 MHz → 200 MHz, SCI_A GPIO84/85 115207 Bd, XCP on Serial, COM4, 0 ePWM). `MW_SetVREF` ist damit aufgelöst.
