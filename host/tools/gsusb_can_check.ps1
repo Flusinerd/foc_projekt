@@ -82,7 +82,7 @@ function Fmt($f) {
     $data = ($f[12..(11 + [Math]::Min($dlc, 8))] | ForEach-Object { '{0:X2}' -f $_ }) -join ' '
     # Fehlerrahmen (CAN_ERR_FLAG): ID-Bits = Fehlerklasse (0x20 ACK, 0x04 Controller, 0x08 Protokoll),
     # data[1] = Controllerstatus (0x04/0x08 Warnung RX/TX, 0x10/0x20 passiv RX/TX)
-    $kind = if ($id -band 0x20000000) { 'ERROR  ' } elseif ($echo -ne 0xFFFFFFFF) { 'TX-Echo' } else { 'RX     ' }
+    $kind = if ($id -band 0x20000000) { 'ERROR  ' } elseif ($echo -eq 0) { 'TX-Echo' } else { 'RX     ' }
     '{0} ID=0x{1:X3} DLC={2} [{3}] {4}' -f $kind, ($id -band 0x1FFFFFFF), $dlc, $data, ($flags -join ',')
 }
 

@@ -1,4 +1,4 @@
-function foc_build_can_probe(overwrite)
+function foc_build_can_probe(overwrite, clockSource)
 %FOC_BUILD_CAN_PROBE  CAN-Grundtest eCAN_A (GPIO4/5, ISO1050 U8), ohne PWM, ohne External Mode.
 %
 %   foc_build_can_probe()        legt matlab/models/test/foc_can_probe.slx an
@@ -12,6 +12,7 @@ function foc_build_can_probe(overwrite)
 %   siehe docs/Hardware-Ueberblick_Frequenzumrichter.md.
 
 if nargin < 1, overwrite = false; end
+if nargin < 2 || isempty(clockSource), clockSource = 'app'; end   % 'ext25' = externer 25-MHz-Oszillator
 root = fileparts(fileparts(mfilename('fullpath')));
 mdl = 'foc_can_probe';
 mdlFile = fullfile(root, 'models', 'test', [mdl '.slx']);
@@ -26,7 +27,7 @@ set_param(mdl, 'HardwareBoard', 'TI F2838x');
 cs = getActiveConfigSet(mdl);
 set_param(mdl, 'SolverType', 'Fixed-step', 'Solver', 'FixedStepDiscrete', 'FixedStep', '0.01', ...
     'StopTime', 'inf', 'ExtMode', 'off');
-foc_probe_clock(cs);   % Takt wie app_speed (200 MHz)
+foc_probe_clock(cs, clockSource);   % 200 MHz (app: intern wie app_speed, ext25: externer Oszillator)
 ct = { ...
       'eCAN_A.PinAssignment_Tx', 'GPIO4'; 'eCAN_A.PinAssignment_Rx', 'GPIO5'; ...
       'eCAN_A.BaudRatePrescaler', 20; 'eCAN_A.TSEG1', 5; 'eCAN_A.TSEG2', 4; ...
