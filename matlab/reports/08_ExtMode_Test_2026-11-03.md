@@ -1,5 +1,15 @@
 # External Mode – Machbarkeit und erster Test (2026-11-03) – ANGEHALTEN (Linker, Prüfmodell)
 
+## Nachtrag 2: Prüfmodell v2 gebaut und geflasht, External-Mode-Verbindung liefert noch keine Daten
+
+- **Prüfmodell v2** (`foc_build_extmode_probe`, frisches Modell, Blöcke aus `c2838xlib`, Takt intern 10 MHz → 200 MHz, SCI_A GPIO84/85 115207 Bd, XCP on Serial, COM4, 0 ePWM). `MW_SetVREF` ist damit aufgelöst.
+- **Linkerfehler `extmodeEvent/ParseArgs/Reset`:** Diese Funktionen stehen in `toolbox/coder/xcp/src/target/ext_mode/src/xcp_ext_mode.c`. Die Build-Info des C2000-Targets (R2023a) bindet die Datei nicht ein, obwohl `ert_main.c` sie aufruft. Abhilfe **nur im Prüfmodell**: `CustomSource = …/xcp_ext_mode.c`. Danach Build erfolgreich (`foc_extmode_probe.out`). Die Toolbox ist unverändert.
+- **Flashen erfolgreich:** CCS-Ausgabe „Loading the program to the target … Program is running … LOAD & RUN DONE“ über den XDS100.
+- **Verbindung:** `connect` meldet keinen Fehler, aber der Status bleibt `stopped` und es kommen keine Daten im SDI an. Das gilt auch beim zweiten, reinen Verbindungsversuch ohne Flashen (`foc_run_extmode_probe(5, false)`).
+- **Hinweis aus dem Log:** „The clock backup and restore functionality is not supported with this CCS version. When using 'Boot from flash', perform a board power cycle after flashing to ensure that the program executes at the desired clock frequency.“ Nach dem Flashen läuft der Takt daher möglicherweise falsch, und die SCI-Baudrate passt nicht.
+- **Nächster Schritt (Mensch):** Steuerplatine einmal aus- und einschalten und prüfen, ob die Heartbeat-LED (GPIO56) mit 2 Hz blinkt. Danach `foc_run_extmode_probe(5, false)`. Falls im Batch-Modus weiterhin nichts ankommt: einmal in der MATLAB-GUI das Prüfmodell öffnen und *Monitor & Tune → Connect* (die GUI zeigt Verbindungsfehler an).
+- **Zustand der Hardware:** Im Flash liegt jetzt das Prüfmodell (keine PWM, nur ADC lesen, LED). Die frühere Firmware ist überschrieben.
+
 ## Nachtrag: Lauf ohne Sandbox (Freigabe des Menschen) – Ursache des Make-Fehlers gefunden
 
 1. **Ohne Sandbox:** derselbe Fehler (`foc_extmode_probe.bat … nicht gefunden`). Die Sandbox ist also **nicht** die Ursache.
