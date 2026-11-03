@@ -46,6 +46,27 @@ target_compile_definitions(focstudio PRIVATE
     QT_NO_KEYWORDS)
 target_link_libraries(focstudio PRIVATE focstudio_core fochost qwt Qt6::Widgets)
 
+# --- installation (used by CPack, see cmake/Packaging.cmake) -----------------------------
+# Layout as Qt's deploy script expects it: bin/ (focstudio.exe, Qt DLLs, qt.conf,
+# MSVC runtime), plugins/, licenses/. windeployqt does the Qt part.
+install(TARGETS focstudio RUNTIME DESTINATION bin)
+qt_generate_deploy_app_script(TARGET focstudio
+    OUTPUT_SCRIPT focstudio_deploy
+    NO_UNSUPPORTED_PLATFORM_ERROR
+    NO_TRANSLATIONS                       # Qt strings are merged into our .qm files
+    DEPLOY_TOOL_OPTIONS --no-compiler-runtime --no-system-d3d-compiler --no-system-dxc-compiler
+                        --no-opengl-sw --skip-plugin-types tls,networkinformation)
+install(SCRIPT ${focstudio_deploy})
+if(WIN32)
+    set(CMAKE_INSTALL_SYSTEM_RUNTIME_DESTINATION bin)
+    include(InstallRequiredSystemLibraries)   # app-local MSVC runtime, no vc_redist needed
+endif()
+install(FILES ${PROJECT_SOURCE_DIR}/docs/LICENSES.md DESTINATION licenses)
+install(FILES ${qwt_SOURCE_DIR}/COPYING DESTINATION licenses RENAME Qwt-LICENSE.txt)
+if(EXISTS "${QT6_INSTALL_PREFIX}/../../Licenses/LICENSE")
+    install(FILES "${QT6_INSTALL_PREFIX}/../../Licenses/LICENSE" DESTINATION licenses RENAME Qt-LICENSE.txt)
+endif()
+
 if(FOC_BUILD_TESTS)
     add_executable(test_paramfile ${PROJECT_SOURCE_DIR}/host/tests/test_paramfile.cpp)
     target_link_libraries(test_paramfile PRIVATE focstudio_core)

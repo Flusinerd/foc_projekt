@@ -49,7 +49,11 @@ if(FOC_BUILD_GUI)
     add_subdirectory(host/studio)
 endif()
 if(FOC_BUILD_DEV_GUI)
+    set(GLFW_INSTALL OFF CACHE BOOL "" FORCE)   # developer tool, not part of the installer
     add_subdirectory(host/app)
+endif()
+if(FOC_BUILD_GUI)
+    include(cmake/Packaging.cmake)
 endif()
 
 # --- tests -----------------------------------------------------------------------------

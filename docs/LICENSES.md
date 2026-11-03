@@ -10,8 +10,15 @@ Stand: 2026-11-03. Abhängigkeiten außer Qt werden per CMake `FetchContent` auf
 |---|---|---|---|---|
 | Qt Core, Gui, Widgets | 6.12.0 | LGPL 3 | dynamisch (DLL) | Qt-DLLs werden mit `windeployqt` ausgeliefert, Austausch durch den Anwender möglich |
 | Qt PrintSupport, Concurrent | 6.12.0 | LGPL 3 | dynamisch | von Qwt benötigt |
+| Qt Svg, Network | 6.12.0 | LGPL 3 | dynamisch | von `windeployqt` mitgeliefert (SVG-Icon-/Bild-Plugins) |
+| Qt-Übersetzungen (qtbase) | 6.12.0 | LGPL 3 | in die eigenen `.qm`-Dateien gemischt | Standarddialoge auf Deutsch |
+| Microsoft Visual C++ Runtime | 14.44 | Microsoft Redistributable (Visual Studio Lizenz) | DLLs neben dem Programm | `InstallRequiredSystemLibraries`; Weitergabe ausdrücklich erlaubt |
 | Qwt | 6.3.0 | Qwt License 1.0 = LGPL 2.1 mit Ausnahmen | statisch, aus Quellen (`cmake/Qwt.cmake`) | Ausnahme 2 erlaubt statisches Linken ohne Quellcode-Pflicht für die Anwendung; Änderungen an Qwt selbst müssten offengelegt werden (keine vorgenommen) |
 | WinUSB, SetupAPI | Windows | Systembibliotheken | dynamisch | Teil von Windows |
+
+Im Installer liegen unter `licenses/`: diese Datei, `Qt-LICENSE.txt` (Lizenztexte aus dem Qt-Installer, enthält LGPL 3) und `Qwt-LICENSE.txt`. Der „Über“-Dialog (Hilfe → Über) zeigt diese Datei an und bietet „Über Qt“.
+
+**Werkzeuge (nicht ausgeliefert):** NSIS (zlib/libpng-Lizenz) für den Installer, Qt Linguist Tools (GPL 3 bzw. kommerziell; nur Entwicklungswerkzeug, die erzeugten `.qm`-Dateien sind davon nicht betroffen), CMake (BSD 3).
 
 ## Kern `fochost` und Tests
 
