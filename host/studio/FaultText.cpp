@@ -69,7 +69,7 @@ std::vector<FaultText> DriveTexts::faults(uint16_t faults)
             break;
         case FOCP_FAULT_OVERVOLTAGE:
             out.push_back({b, tr("Supply voltage too high"),
-                           tr("Braking feeds energy back into the supply. A lab power supply cannot absorb it: brake more gently or use a supply that can.")});
+                           tr("Check the supply voltage. Braking also feeds energy back into the supply, which a lab power supply cannot absorb: brake more gently or use a supply that can.")});
             break;
         case FOCP_FAULT_OVERTEMP:
             out.push_back({b, tr("Power stage too hot"),

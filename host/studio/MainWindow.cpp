@@ -5,6 +5,8 @@
 #include "ControlPanel.hpp"
 #include "DashboardPage.hpp"
 #include "DriveController.hpp"
+#include "EventLog.hpp"
+#include "EventsPage.hpp"
 #include "ParametersPage.hpp"
 #include "ScopePage.hpp"
 #include "ScopeWidget.hpp"
@@ -95,6 +97,7 @@ MainWindow::MainWindow(DriveController* ctl, QWidget* parent) : QMainWindow(pare
     ov->addWidget(new ControlPanel(ctl_), 2);
     tabs_->addTab(overview, tr("&Overview"));
     tabs_->addTab(new ParametersPage(ctl_), tr("&Parameters"));
+    tabs_->addTab(new EventsPage(new EventLog(ctl_, this)), tr("E&vents"));
     scopePage_ = new ScopePage(ctl_);
     commissioningPage_ = new CommissioningPage(ctl_);
     setCentralWidget(tabs_);

@@ -136,5 +136,7 @@ void DriveController::demoStep()
     if (phase(2, 5.5)) { dev_.writeParam(FOCP_P_SIM_T_LOAD, 0.3f); demoPhase_ = 2; }
     if (phase(3, 7.0)) { setReference(3000); demoPhase_ = 3; }
     if (phase(4, 9.0)) { dev_.writeParam(FOCP_P_SIM_T_LOAD, 0.0f); setReference(-1000); demoPhase_ = 4; }
-    if (phase(5, 11.5)) { demo_ = false; demoPhase_ = 5; }
+    // Show the fault handling: supply above inv.Udc_max -> overvoltage trip; the user acknowledges.
+    if (phase(5, 12.0)) { dev_.writeParam(FOCP_P_SIM_UDC, 33.0f); demoPhase_ = 5; }
+    if (phase(6, 14.0)) { dev_.writeParam(FOCP_P_SIM_UDC, 24.0f); demo_ = false; demoPhase_ = 6; }
 }

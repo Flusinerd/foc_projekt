@@ -30,10 +30,31 @@ struct DriveInfo {
     int protocol = 0, fwMajor = 0, fwMinor = 0, board = 0, numParams = 0, numSignals = 0;
 };
 
+/// What a log entry is about, so a GUI can phrase (and translate) it itself.
+enum class LogKind {
+    Text,              ///< free text only
+    Connected,         ///< code = node, detail = transport name
+    Disconnected,
+    CalibStarted,      ///< code = focp_calib_t
+    CalibDone,         ///< code = focp_calib_t (0 if unknown)
+    CalibFailed,       ///< code = focp_calib_t (0 if unknown)
+    State,             ///< code = new focp_state_t
+    FaultSet,          ///< code = one fault bit
+    FaultCleared,      ///< code = one fault bit
+    ParamsSaved,
+    ParamRejected,     ///< code = focp_param_status_t, detail = parameter name
+    UnknownParam,      ///< code = parameter id
+    VersionMismatch,
+};
+
 struct LogEntry {
     double t;          ///< seconds since connect
     int level;         ///< 0 info, 1 warning, 2 error
-    std::string text;
+    std::string text;  ///< German text (developer tool)
+    LogKind kind = LogKind::Text;
+    int code = 0;
+    std::string detail;
+    uint64_t seq = 0;  ///< increases with every entry, survives the 2000-entry limit
 };
 
 /// Ring buffer for streamed telemetry. Layout fits ImPlot's (data, count, offset) API.
@@ -102,6 +123,8 @@ public:
     DriveStatus status() const;
     DriveInfo info() const;
     std::vector<LogEntry> log() const;
+    /// Only entries with LogEntry::seq > seq (cheap polling).
+    std::vector<LogEntry> logSince(uint64_t seq) const;
     void clearLog();
     double connectedTime() const;
     uint64_t rxMessages() const { return rxCount_; }
@@ -113,7 +136,7 @@ private:
     void handle(const focp_msg_t& m);
     void handleTelem(const focp_msg_t& m);
     void send(const focp_msg_t& m);
-    void addLog(int level, std::string text);
+    void addLog(int level, std::string text, LogKind kind = LogKind::Text, int code = 0, std::string detail = {});
 
     std::unique_ptr<Transport> tr_;
     uint16_t node_ = 1;
@@ -126,6 +149,7 @@ private:
     DriveStatus status_;
     DriveInfo info_;
     std::deque<LogEntry> log_;
+    uint64_t logSeq_ = 0;
 
     mutable std::mutex scopeMx_;
     ScopeBuffer scope_;

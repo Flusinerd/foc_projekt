@@ -90,7 +90,7 @@ bool Device::connect(std::unique_ptr<Transport> t, uint16_t node, std::string& e
     }
     running_ = true;
     rx_ = std::thread([this] { rxLoop(); });
-    addLog(0, "Verbunden ueber " + tr_->name() + ", Knoten " + std::to_string(node));
+    addLog(0, "Verbunden ueber " + tr_->name() + ", Knoten " + std::to_string(node), LogKind::Connected, node, tr_->name());
     requestInfo();
     readAllParams();
     return true;
@@ -103,7 +103,7 @@ void Device::disconnect()
     running_ = false;
     if (rx_.joinable()) rx_.join();
     tr_->close();
-    addLog(0, "Verbindung getrennt");
+    addLog(0, "Verbindung getrennt", LogKind::Disconnected);
     tr_.reset();
 }
 
@@ -132,7 +132,7 @@ void Device::calibrate(focp_calib_t what)
     focp_msg_t m;
     focp_build_cmd_u8(&m, node_, FOCP_CMD_CALIBRATE, static_cast<uint16_t>(what));
     send(m);
-    addLog(0, "Kalibrierung gestartet");
+    addLog(0, "Kalibrierung gestartet", LogKind::CalibStarted, int(what));
 }
 
 void Device::loadDefaults()
@@ -190,10 +190,18 @@ std::vector<LogEntry> Device::log() const
 
 void Device::clearLog() { std::lock_guard<std::mutex> lk(mx_); log_.clear(); }
 
-void Device::addLog(int level, std::string text)
+std::vector<LogEntry> Device::logSince(uint64_t seq) const
 {
     std::lock_guard<std::mutex> lk(mx_);
-    log_.push_back({connectedTime(), level, std::move(text)});
+    auto it = log_.end();
+    while (it != log_.begin() && std::prev(it)->seq > seq) --it;
+    return {it, log_.end()};
+}
+
+void Device::addLog(int level, std::string text, LogKind kind, int code, std::string detail)
+{
+    std::lock_guard<std::mutex> lk(mx_);
+    log_.push_back({connectedTime(), level, std::move(text), kind, code, std::move(detail), ++logSeq_});
     while (log_.size() > 2000) log_.pop_front();
 }
 
@@ -333,7 +341,7 @@ void Device::handle(const focp_msg_t& m)
         const uint16_t st = m.data[0] & 0xFF;
         const uint16_t id = focp_get_u16(&m.data[1]);
         const int idx = focp_param_find(id);
-        if (idx < 0) { addLog(1, "Antwort fuer unbekannte Parameter-ID 0x" + std::to_string(id)); break; }
+        if (idx < 0) { addLog(1, "Antwort fuer unbekannte Parameter-ID 0x" + std::to_string(id), LogKind::UnknownParam, id); break; }
         {
             std::lock_guard<std::mutex> lk(mx_);
             auto& p = params_[idx];
@@ -344,7 +352,8 @@ void Device::handle(const focp_msg_t& m)
         }
         if (st != FOCP_PS_OK) {
             static const char* why[] = {"ok", "unbekannt", "nur lesbar", "ausserhalb Bereich", "gesperrt (Antrieb laeuft)", "ungueltige Anfrage"};
-            addLog(1, std::string("Parameter ") + focp_param_table[idx].name + ": " + (st < 6 ? why[st] : "?"));
+            addLog(1, std::string("Parameter ") + focp_param_table[idx].name + ": " + (st < 6 ? why[st] : "?"),
+                   LogKind::ParamRejected, st, focp_param_table[idx].name);
         }
         break;
     }
@@ -353,16 +362,17 @@ void Device::handle(const focp_msg_t& m)
         if (m.len < 7) break;
         const int ev = m.data[0] & 0xFF;
         const uint16_t code = focp_get_u16(&m.data[1]);
-        if (ev == FOCP_EV_STATE) addLog(0, std::string("Zustand -> ") + focp_state_name(code));
+        if (ev == FOCP_EV_STATE) addLog(0, std::string("Zustand -> ") + focp_state_name(code), LogKind::State, code);
         else if (ev == FOCP_EV_FAULT_SET || ev == FOCP_EV_FAULT_CLEAR) {
             for (uint16_t b = 1; b; b <<= 1)
                 if (code & b)
                     addLog(ev == FOCP_EV_FAULT_SET ? 2 : 0,
-                           std::string(ev == FOCP_EV_FAULT_SET ? "Fehler: " : "Quittiert: ") + focp_fault_name(b));
+                           std::string(ev == FOCP_EV_FAULT_SET ? "Fehler: " : "Quittiert: ") + focp_fault_name(b),
+                           ev == FOCP_EV_FAULT_SET ? LogKind::FaultSet : LogKind::FaultCleared, b);
         }
-        else if (ev == FOCP_EV_CALIB_DONE) { addLog(0, "Kalibrierung abgeschlossen"); readAllParams(); }
-        else if (ev == FOCP_EV_CALIB_FAILED) addLog(2, "Kalibrierung fehlgeschlagen / nicht verfuegbar");
-        else if (ev == FOCP_EV_PARAMS_SAVED) addLog(0, "Parameter gespeichert");
+        else if (ev == FOCP_EV_CALIB_DONE) { addLog(0, "Kalibrierung abgeschlossen", LogKind::CalibDone, code); readAllParams(); }
+        else if (ev == FOCP_EV_CALIB_FAILED) addLog(2, "Kalibrierung fehlgeschlagen / nicht verfuegbar", LogKind::CalibFailed, code);
+        else if (ev == FOCP_EV_PARAMS_SAVED) addLog(0, "Parameter gespeichert", LogKind::ParamsSaved);
         break;
     }
 
@@ -383,7 +393,7 @@ void Device::handle(const focp_msg_t& m)
     if (m.fn == FOCP_FN_INFO) {
         const auto inf = info();
         if (inf.protocol != int(FOCP_PROTOCOL_VERSION) || inf.numParams != FOCP_NUM_PARAMS || inf.numSignals != FOCP_NUM_SIGNALS)
-            addLog(1, "Protokoll-/Tabellenversion von Antrieb und Tool unterscheiden sich");
+            addLog(1, "Protokoll-/Tabellenversion von Antrieb und Tool unterscheiden sich", LogKind::VersionMismatch);
     }
 }
 

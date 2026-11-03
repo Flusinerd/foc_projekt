@@ -72,6 +72,27 @@ int main()
     dev.ackFault();
     CHECK(waitFor([&] { return dev.status().state == FOCP_ST_READY; }, 1000ms));
 
+    std::puts("structured log entries");
+    {
+        using fochost::LogKind;
+        const auto log = dev.log();
+        auto has = [&](LogKind k, int code) {
+            for (const auto& e : log) if (e.kind == k && e.code == code) return true;
+            return false;
+        };
+        CHECK(!log.empty() && log.front().kind == LogKind::Connected && log.front().detail == "Simulation");
+        CHECK(has(LogKind::FaultSet, FOCP_FAULT_COMM));
+        CHECK(has(LogKind::FaultCleared, FOCP_FAULT_COMM));
+        CHECK(has(LogKind::State, FOCP_ST_RUN));
+        CHECK(has(LogKind::ParamRejected, FOCP_PS_OUT_OF_RANGE));
+        bool increasing = true;
+        for (size_t i = 1; i < log.size(); ++i) increasing = increasing && log[i].seq > log[i - 1].seq;
+        CHECK(increasing);
+        const auto tail = dev.logSince(log[log.size() - 3].seq);
+        CHECK(tail.size() >= 2 && tail.front().seq == log[log.size() - 2].seq);
+        CHECK(dev.logSince(log.back().seq + 1000).empty() || dev.logSince(log.back().seq + 1000).front().seq > log.back().seq);
+    }
+
     CHECK(dev.exportCsv((std::filesystem::temp_directory_path() / "focp_test_scope.csv").string(), err));
     dev.disconnect();
     return TEST_RESULT();

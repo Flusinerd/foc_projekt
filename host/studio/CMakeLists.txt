@@ -13,6 +13,8 @@ qt_add_executable(focstudio WIN32
     ScopeWidget.cpp ScopeWidget.hpp
     ScopePage.cpp ScopePage.hpp
     CommissioningPage.cpp CommissioningPage.hpp
+    EventLog.cpp EventLog.hpp
+    EventsPage.cpp EventsPage.hpp
     MainWindow.cpp MainWindow.hpp
     DriveController.cpp DriveController.hpp
     ConnectionDialog.cpp ConnectionDialog.hpp
