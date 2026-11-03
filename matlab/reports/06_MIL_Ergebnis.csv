@@ -1,0 +1,5 @@
+name,outcome,baseline,verifyRes
+Freemode_SW_ANF_01_07_08,Passed,ok,verify(Freemode_Sig == 1)=pass; verify(Freemode_Sig == 0)=pass
+MaxVelocity_SW_ANF_04,Passed,ok,verify_speedMode1_limit=pass; verify_speedMode2_limit=pass; verify_speedMode3_limit=pass
+SpeedController_SW_ANF_05,Passed,ok,DesiredTorquePositive=pass; DesiredTorqueNegative=pass; DesiredTorquePositiveFreemodeEnabled=pass; DesiredTorqueNegativeFreemodeDisabled=pass
+SafeState_SW_ANF_03,Passed,ok,verify_Enabled_Freemode=pass; verify_Disabled_Freemode=pass
