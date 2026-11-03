@@ -34,7 +34,7 @@ bool canToMsg(uint32_t canId, const uint8_t* data, uint8_t dlc, focp_msg_t& m)
 {
     if (canId > 0x7FF) return false;                        // FOCP uses 11-bit IDs only
     const uint16_t fn = FOCP_CAN_FN(canId);
-    if (fn < FOCP_FN_CMD || fn > FOCP_FN_INFO) return false; // foreign traffic (e.g. CarPediem 0x1xx)
+    if (fn < FOCP_FN_CMD || fn > FOCP_FN_INFO) return false; // foreign traffic (e.g. CarpeDiem 0x1xx)
     m.fn = fn;
     m.node = FOCP_CAN_NODE(canId);
     m.len = dlc > 8 ? 8 : dlc;

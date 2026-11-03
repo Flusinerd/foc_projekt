@@ -125,7 +125,7 @@ public:
         if (len < kFrameSize || !drive_) return 0;
         // Interleave traffic the transport has to ignore.
         switch (++reads_ % 7) {
-        case 1: f.canId = 0x101; f.dlc = 2; break;                        // old CarPediem ID
+        case 1: f.canId = 0x101; f.dlc = 2; break;                        // old CarpeDiem ID
         case 2: f.canId = kFlagEff | FOCP_CAN_ID(FOCP_FN_STATUS, 1); break; // 29-bit ID
         case 3: f.canId = kFlagErr | 0x04; f.dlc = 8; break;              // error frame
         default: {

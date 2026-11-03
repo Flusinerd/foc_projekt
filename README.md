@@ -1,8 +1,8 @@
 <img src="docs/img/logo/carpediem_logo.svg" alt="CarpeDiem – Labor für Aktorik, Hochschule Bochum" width="360">
 
-# FOC-Framework (CarPediem, 4. Generation)
+# FOC-Framework (CarpeDiem, 4. Generation)
 
-Ausbau der CarPediem-Firmware (Masterarbeit Akgül 2023) zu einem wiederverwendbaren FOC-Framework für den F28388D-Frequenzumrichter. Ziel sind Drehzahl- und Lageregelung mit Hall, sensorlos oder hybrid.
+Ausbau der CarpeDiem-Firmware (Masterarbeit Akgül 2023) zu einem wiederverwendbaren FOC-Framework für den F28388D-Frequenzumrichter. Ziel sind Drehzahl- und Lageregelung mit Hall, sensorlos oder hybrid.
 
 Dieser Stand enthält den **Kommunikationskern** und das **Host-Tool**:
 
@@ -66,7 +66,7 @@ Jede Nachricht hat höchstens 8 Byte Nutzdaten und entspricht damit genau einem 
 | 0x25 EVENT | 0x250+n | Antrieb → Host | Fehler gesetzt/quittiert, Zustand, Kalibrierung |
 | 0x26 INFO | 0x260+n | Antrieb → Host | Protokoll-/FW-Version, Tabellengrößen |
 
-Der Bereich 0x200–0x26F kollidiert nicht mit den alten CarPediem-IDs (0x101/0x102/0x110/0x111).
+Der Bereich 0x200–0x26F kollidiert nicht mit den alten CarpeDiem-IDs (0x101/0x102/0x110/0x111).
 
 **Neuen Parameter oder neues Signal anlegen:** eine Zeile in `protocol/include/focp/focp_params.def` bzw. `focp_signals.def` ergänzen und Firmware und Tool neu bauen. Eine einmal vergebene ID wird nie wiederverwendet. Weichen die Tabellen von Antrieb und Tool voneinander ab, meldet das Tool das nach dem Verbinden.
 

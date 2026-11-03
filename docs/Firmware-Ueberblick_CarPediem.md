@@ -1,4 +1,4 @@
-# CarPediem – Überblick über die bisherige Firmware (Stand: Masterarbeit B. Akgül, Dez 2023)
+# CarpeDiem – Überblick über die bisherige Firmware (Stand: Masterarbeit B. Akgül, Dez 2023)
 
 > Einarbeitung aus `CarpeDiem_SW.zip` und der Masterarbeit „Modellbasierte Entwicklung und Verifikation mit MATLAB/Simulink eines modularen Frequenzumrichters“ (B. Akgül, HS Bochum / Smart Mechatronics GmbH, 18.12.2023, Betreuer Prof. A. Bergmann, C. Peters). Es ist die **3. Generation** des Instituts-Frequenzumrichters; die Hardware entstand parallel in einer zweiten Masterarbeit [4] (nicht im Archiv).
 > Es gibt **keinen handgeschriebenen C-Code** – die Firmware ist vollständig modellbasiert (Simulink + Embedded Coder, MATLAB R2023a) und wird aus `impmodel.slx` generiert.

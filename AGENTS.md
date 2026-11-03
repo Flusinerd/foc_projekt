@@ -4,7 +4,7 @@
 
 ## 1. Worum es geht
 
-Ausbau der Motorregler-Firmware eines modularen Frequenzumrichters (Hochschule Bochum, Projekt CarPediem) zu einem **FOC-Framework**. Die Vorgabe ist **modellbasierte Entwicklung mit MATLAB/Simulink**: Die Firmware wird aus Simulink-Modellen generiert (Embedded Coder, C2000 Microcontroller Blockset). Handgeschriebener Firmware-C-Code ist **nicht** freigegeben, bis der Betreuer das klärt.
+Ausbau der Motorregler-Firmware eines modularen Frequenzumrichters (Hochschule Bochum, Projekt CarpeDiem) zu einem **FOC-Framework**. Die Vorgabe ist **modellbasierte Entwicklung mit MATLAB/Simulink**: Die Firmware wird aus Simulink-Modellen generiert (Embedded Coder, C2000 Microcontroller Blockset). Handgeschriebener Firmware-C-Code ist **nicht** freigegeben, bis der Betreuer das klärt.
 
 - Zielhardware: Steuerplatine mit **TMS320F28386D** (176-QFP), Leistungsstufe **DRV8300DIPW-EVM**, Motor **ebm-papst ECI 63.60** (24 V, 4 Polpaare, Hall-Sensoren)
 - Ausgangsstand: Simulink-Modell der Masterarbeit Akgül 2023 (`matlab/models/legacy/impmodel.slx`)

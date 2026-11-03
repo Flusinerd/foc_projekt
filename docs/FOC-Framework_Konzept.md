@@ -1,6 +1,6 @@
 # FOC-Framework – Konzept & Roadmap (Entwurf v0.1)
 
-Ziel: Die CarPediem-Firmware (impmodel.slx, Masterarbeit Akgül 2023) wird zu einem **wiederverwendbaren FOC-Framework** ausgebaut. Damit lassen sich **Drehzahl- und Positionsregelung** als dünne Anwendungsmodelle umsetzen. Drei Bausteine kommen dazu: Simulink-Bibliothek, Inbetriebnahme-Tool (MATLAB) und Host-GUI.
+Ziel: Die CarpeDiem-Firmware (impmodel.slx, Masterarbeit Akgül 2023) wird zu einem **wiederverwendbaren FOC-Framework** ausgebaut. Damit lassen sich **Drehzahl- und Positionsregelung** als dünne Anwendungsmodelle umsetzen. Drei Bausteine kommen dazu: Simulink-Bibliothek, Inbetriebnahme-Tool (MATLAB) und Host-GUI.
 Zielhardware: **F28388D-Platine + DRV8300** (wird bei Bedarf überarbeitet). Lagegeber: **Hall und sensorlos, umschaltbar**.
 
 ---

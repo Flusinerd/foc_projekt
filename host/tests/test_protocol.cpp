@@ -62,7 +62,7 @@ static void testCan()
     CHECK(r.fn == FOCP_FN_PARAM_REQ && r.node == 3 && r.len == 7);
     CHECK(focp_get_f32(&r.data[3]) == 0.5f);
     const uint8_t legacy[8] = {1};
-    CHECK(!fochost::canToMsg(0x101, legacy, 2, r));            // CarPediem Freemode frame ignored
+    CHECK(!fochost::canToMsg(0x101, legacy, 2, r));            // CarpeDiem Freemode frame ignored
 }
 
 static void testFrame()
