@@ -1,5 +1,5 @@
 # FOC Studio - end-user application (Qt 6 Widgets). Qt-free core: fochost.
-find_package(Qt6 6.5 REQUIRED COMPONENTS Widgets)
+find_package(Qt6 6.7 REQUIRED COMPONENTS Widgets LinguistTools)
 include(${PROJECT_SOURCE_DIR}/cmake/Qwt.cmake)
 
 # Qt Core only parts, also used by the tests.
@@ -21,7 +21,25 @@ qt_add_executable(focstudio WIN32
     ControlPanel.cpp ControlPanel.hpp
     DashboardPage.cpp DashboardPage.hpp
     FaultText.cpp FaultText.hpp
+    AboutDialog.cpp AboutDialog.hpp
 )
+
+# Translations: English is the source language, German in focstudio_de.ts.
+# `cmake --build build --target update_translations` refreshes the .ts files (lupdate).
+# Qt's own strings (standard buttons, file dialog) are merged into the .qm files.
+qt_add_translations(TARGETS focstudio
+    SOURCE_TARGETS focstudio focstudio_core
+    TS_FILES translations/focstudio_de.ts
+    PLURALS_TS_FILE translations/focstudio_en.ts
+    LUPDATE_OPTIONS -no-obsolete
+    MERGE_QT_TRANSLATIONS
+    QT_TRANSLATION_CATALOGS qtbase
+    RESOURCE_PREFIX /i18n)
+
+qt_add_resources(focstudio docs
+    PREFIX /docs
+    BASE ${PROJECT_SOURCE_DIR}/docs
+    FILES ${PROJECT_SOURCE_DIR}/docs/LICENSES.md)
 set_target_properties(focstudio PROPERTIES AUTOMOC ON)
 target_compile_definitions(focstudio PRIVATE
     FOC_STUDIO_VERSION="${PROJECT_VERSION}"

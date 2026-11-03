@@ -8,8 +8,10 @@
 
 #include <QApplication>
 #include <QCommandLineParser>
-#include <QScreen>
+#include <QLocale>
+#include <QSettings>
 #include <QTimer>
+#include <QTranslator>
 
 #include <cstdio>
 
@@ -20,6 +22,15 @@ int main(int argc, char** argv)
     QApplication::setOrganizationDomain(QStringLiteral("hs-bochum.de"));
     QApplication::setApplicationName(QStringLiteral("FOC Studio"));
     QApplication::setApplicationVersion(QStringLiteral(FOC_STUDIO_VERSION));
+
+    // UI language: setting "ui/language" ("de", "en"), empty = system language.
+    // The .qm files contain Qt's own strings too (MERGE_QT_TRANSLATIONS).
+    QTranslator translator;
+    const QString lang = QSettings().value(QStringLiteral("ui/language")).toString();
+    const QLocale locale = lang.isEmpty() ? QLocale::system() : QLocale(lang);
+    if (translator.load(locale, QStringLiteral("focstudio"), QStringLiteral("_"), QStringLiteral(":/i18n")))
+        QApplication::installTranslator(&translator);
+    QLocale::setDefault(locale);
 
     QCommandLineParser cli;
     cli.setApplicationDescription(QStringLiteral("FOC Studio"));

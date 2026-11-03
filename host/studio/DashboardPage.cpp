@@ -7,6 +7,7 @@
 #include <QGridLayout>
 #include <QGroupBox>
 #include <QLabel>
+#include <QLocale>
 #include <QVBoxLayout>
 
 DashboardPage::DashboardPage(DriveController* ctl, QWidget* parent) : QWidget(parent), ctl_(ctl)
@@ -73,9 +74,10 @@ void DashboardPage::refresh()
     state_->setStyleSheet(QStringLiteral("QLabel { background:%1; color:white; border-radius:6px; padding:8px; }")
                               .arg(bg.name()));
 
-    speed_->setText(conn && ctl_->speedValid() ? tr("%1 rpm").arg(ctl_->speed(), 0, 'f', 0) : dash);
-    udc_->setText(valid ? tr("%1 V").arg(double(st.udc), 0, 'f', 1) : dash);
-    temp_->setText(valid ? tr("%1 °C").arg(double(st.temp), 0, 'f', 1) : dash);
+    const QLocale loc;   // decimal comma in German
+    speed_->setText(conn && ctl_->speedValid() ? tr("%1 rpm").arg(loc.toString(ctl_->speed(), 'f', 0)) : dash);
+    udc_->setText(valid ? tr("%1 V").arg(loc.toString(double(st.udc), 'f', 1)) : dash);
+    temp_->setText(valid ? tr("%1 °C").arg(loc.toString(double(st.temp), 'f', 1)) : dash);
     mode_->setText(valid ? DriveTexts::mode(st.mode) : dash);
     sensor_->setText(valid ? DriveTexts::sensor(st.sensor) : dash);
 

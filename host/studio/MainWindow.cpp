@@ -1,5 +1,6 @@
 #include "MainWindow.hpp"
 
+#include "AboutDialog.hpp"
 #include "CommissioningPage.hpp"
 #include "ConnectionDialog.hpp"
 #include "ControlPanel.hpp"
@@ -12,7 +13,9 @@
 #include "ScopeWidget.hpp"
 
 #include <QAction>
+#include <QActionGroup>
 #include <QApplication>
+#include <QSettings>
 #include <QHBoxLayout>
 #include <QLabel>
 #include <QMenuBar>
@@ -55,6 +58,28 @@ MainWindow::MainWindow(DriveController* ctl, QWidget* parent) : QMainWindow(pare
     actExpert_->setChecked(ctl_->expertMode());
     connect(actExpert_, &QAction::toggled, this, &MainWindow::onExpertToggled);
     view->addAction(actExpert_);
+    view->addSeparator();
+    QMenu* langMenu = view->addMenu(tr("&Language"));
+    auto* langGroup = new QActionGroup(this);
+    const QString current = QSettings().value(QStringLiteral("ui/language")).toString();
+    const std::pair<QString, QString> langs[] = {
+        {QString(), tr("&System default")},
+        {QStringLiteral("de"), QStringLiteral("&Deutsch")},   // language names stay untranslated
+        {QStringLiteral("en"), QStringLiteral("&English")},
+    };
+    for (const auto& [code, label] : langs) {
+        QAction* a = langMenu->addAction(label);
+        a->setCheckable(true);
+        a->setChecked(code == current);
+        langGroup->addAction(a);
+        connect(a, &QAction::triggered, this, [this, code = code] {
+            QSettings().setValue(QStringLiteral("ui/language"), code);
+            QMessageBox::information(this, tr("Language"), tr("The new language is used after restarting FOC Studio."));
+        });
+    }
+
+    QMenu* help = menuBar()->addMenu(tr("&Help"));
+    help->addAction(tr("&About FOC Studio…"), this, [this] { AboutDialog(ctl_, this).exec(); });
 
     // --- toolbar with the always-visible STOP -------------------------------------------
     auto* tb = addToolBar(tr("Drive"));
@@ -66,9 +91,10 @@ MainWindow::MainWindow(DriveController* ctl, QWidget* parent) : QMainWindow(pare
     spacer->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Preferred);
     tb->addWidget(spacer);
     stop_ = new QPushButton(tr("STOP  (Space / Esc)"));
-    stop_->setMinimumSize(220, 44);
+    stop_->setMinimumHeight(44);
     stop_->setStyleSheet(QStringLiteral(
-        "QPushButton { background:#c62b2b; color:white; font-weight:bold; font-size:14pt; border-radius:6px; }"
+        "QPushButton { background:#c62b2b; color:white; font-weight:bold; font-size:14pt; border-radius:6px;"
+        " padding:4px 22px; }"
         "QPushButton:pressed { background:#8f1f1f; }"
         "QPushButton:disabled { background:#b9a3a3; }"));
     stop_->setFocusPolicy(Qt::NoFocus);   // Space must never "click" a focused button instead

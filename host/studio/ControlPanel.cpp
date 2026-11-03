@@ -21,8 +21,18 @@
 
 namespace {
 constexpr int kSliderSteps = 1000;
-const char* const kUnits[] = {"", "A", "rpm", "°", "rpm"};
+
+QString unitFor(int mode)
+{
+    switch (mode) {
+    case FOCP_MODE_TORQUE:   return QStringLiteral("A");
+    case FOCP_MODE_SPEED:
+    case FOCP_MODE_OPENLOOP: return ControlPanel::tr("rpm");
+    case FOCP_MODE_POSITION: return QStringLiteral("°");
+    default:                 return QString();
+    }
 }
+} // namespace
 
 ControlPanel::ControlPanel(DriveController* ctl, QWidget* parent) : QGroupBox(tr("Operation"), parent), ctl_(ctl)
 {
@@ -141,7 +151,7 @@ void ControlPanel::applyLimits(int mode)
     hi_ = hi;
     updating_ = true;
     ref_->setRange(lo, hi);
-    ref_->setSuffix(QStringLiteral(" ") + QString::fromUtf8(kUnits[std::clamp(mode, 0, 4)]));
+    ref_->setSuffix(QStringLiteral(" ") + unitFor(mode));
     ref_->setSingleStep(mode == FOCP_MODE_TORQUE ? 0.1 : 10.0);
     refPerMode_[size_t(std::clamp(mode, 0, 4))] = std::clamp(refPerMode_[size_t(std::clamp(mode, 0, 4))], lo, hi);
     updating_ = false;

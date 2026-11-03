@@ -106,7 +106,7 @@ ParamFileImport paramsFromJson(const QByteArray& json, bool allowSim)
         }
         const double d = val.toDouble();
         if (!std::isfinite(d) || d < double(info.min) || d > double(info.max)) {
-            r.warnings << ParamFile::tr("%1 = %2 is outside %3 â€¦ %4, skipped.").arg(name).arg(d).arg(double(info.min)).arg(double(info.max));
+            r.warnings << ParamFile::tr("%1 = %2 is outside %3 … %4, skipped.").arg(name).arg(d).arg(double(info.min)).arg(double(info.max));
             continue;
         }
         r.values.emplace_back(idx, float(d));
