@@ -11,9 +11,27 @@
 | Leistungsstufe | **DRV8300DIPW-EVM** (zugekauft, 6–100 V, 30 A, 3 Shunts mit CSA, Temperatursensor), über zwei 20-polige Stiftleisten J1/J2 im LaunchPad-F280049C-Raster angeschlossen. Die Regler des EVM sind per 0-Ω-Widerständen abgetrennt, GVDD (12 V) und 3,3 V kommen von der Hauptplatine. |
 | Versorgung | Eingang 15,25 … 40,34 V (TPS26601 eFuse, Verpolschutz bis −60 V, 1,1 A Strombegrenzung; gemessen) → LT8609 12 V → LT8609 3,3 V → LTC3302 1,2 V. Alternativ **USB-C 5 V** (ORing), dann läuft die Logik ohne Leistungsstufe. Gemessen: 12,06 V / **3,36 V** / 1,22 V. |
 | USB | FT2232HL: Kanal A = JTAG (CCS/Simulink-Flash), Kanal B = UART an **SCIA (GPIO84 TX / GPIO85 RX)** |
-| CAN | ISO1050 (galvanisch getrennt) an GPIO4 (TX) / GPIO5 (RX), Phoenix-Klemme |
+| CAN | ISO1050 (U8, galvanisch getrennt) an GPIO4 (TX, Pin 164) / GPIO5 (RX, Pin 165), Phoenix-Klemme PTS 1,5/5-5,0-H (5-polig, RM 5,0) – Belegung siehe unten |
 | Ethernet | DP83822 (MII), wegen QFP an anderen GPIOs als auf der controlCARD (→ `config_CC_Custom.xlsx` und Patch `CARPEDIEM_PIN_CORRECTION` der Firmware-MA) |
 | Leiterplatte | 4 Lagen (Eurocircuits Defined Impedance), MII 50 Ω, MDI/USB differentiell |
+
+### CAN-Klemme (am Aufbau durchgemessen, 2026-11-03)
+
+Klemme PTS 1,5/5-5,0-H am oberen Platinenrand, Kontakte **von links nach rechts** (Durchgang zum ISO1050 U8 gemessen; Signalnamen nach TI-Datenblatt ISO1050, SOIC-8):
+
+| Kontakt | ISO1050-Pin | Signal |
+|---|---|---|
+| 1 | 8 | **VCC2** – 5-V-Versorgung der isolierten Busseite (**muss von außen eingespeist werden**) |
+| 2 | 7 | **CAN_H** |
+| 3 | 6 | **CAN_L** |
+| 4 | 5 | **GND2** (isolierte Masse) |
+| 5 | 5 | **GND2** |
+
+Folgen:
+- Die Busseite des ISO1050 hat **keine eigene Versorgung auf der Platine**: Am Bus müssen 5 V (4,75–5,25 V laut Datenblatt) auf Kontakt 1 und GND2 auf 4/5 anliegen. Ohne VCC2 bleibt der Transceiver busseitig stumm.
+- **Terminierung (120 Ω):** auf der Platine nicht belegt. Hinter der Klemme sitzt eine 2-polige Stiftleiste mit Widerstand (möglicherweise ein Terminierungs-Jumper, nicht verifiziert). Für einen Laboraufbau Terminierung an beiden Busenden sicherstellen bzw. messen (CAN_H–CAN_L ≈ 60 Ω bei korrekt terminiertem Bus).
+- Bitrate laut Modell 1 Mbit/s (eCAN-A).
+- Quellen: MA Darici Abb. 5.6 (S. 32, GPIO4/5), Abb. 5.17 (S. 47, U8 und Klemme), Literatur [45]. Vollständiger Schaltplan (`CarPediem_Motorcontroller_schematic.pdf`) liegt weiterhin nicht vor.
 
 ## 2. Pinbelegung zur Leistungsstufe (J1 analog, J2 digital)
 
