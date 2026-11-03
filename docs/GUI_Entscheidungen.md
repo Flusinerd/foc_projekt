@@ -16,8 +16,8 @@ Umstellung von FOC Studio vom Entwicklerwerkzeug (Dear ImGui) auf ein Endanwende
 
 ## 2. Umgebung (Stand 2026-11-03)
 
-- Visual Studio 2022 Build Tools 17.14 sind installiert, aber **ohne Workload „Desktopentwicklung mit C++“**: kein MSVC-Toolset, kein CMake. Bauen ist erst nach Nachinstallation möglich.
-- Qt 6: nicht installiert (siehe oben).
+- Visual Studio 2022 Build Tools 17.14 mit „Desktopentwicklung mit C++“: MSVC 19.44 (Toolset 14.44.35207), CMake und Ninja aus den Build Tools. Bauen aus einer Umgebung mit `vcvars64.bat` und `-G Ninja`. Bestandsbau und `ctest` (3/3) bestanden.
+- Qt: Zunächst nur Qt 6.12.0 **MinGW** installiert (`C:\Qt\6.12.0\mingw_64`). Diese Variante ist nicht mit MSVC linkbar. Entscheidung: Die Komponente **Qt 6.12.0 MSVC 2022 64-bit** wird nachinstalliert, damit gilt Qt 6.12 statt 6.8 LTS.
 
 ## 3. Plot-Bibliothek: Qwt oder JKQtPlotter
 
