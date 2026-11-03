@@ -32,12 +32,10 @@ int main(int argc, char** argv)
                              QStringLiteral("ms"), QStringLiteral("3000"));
     QCommandLineOption size(QStringLiteral("size"), QStringLiteral("Window size WxH."), QStringLiteral("WxH"));
     QCommandLineOption tab(QStringLiteral("tab"), QStringLiteral("Open page <n> (0 = overview)."), QStringLiteral("n"));
-    QCommandLineOption expert(QStringLiteral("expert"), QStringLiteral("Start in expert mode (documentation screenshots)."));
-    cli.addOptions({demo, shot, delay, size, tab, expert});
+    cli.addOptions({demo, shot, delay, size, tab});
     cli.process(app);
 
-    DriveController ctl;
-    ctl.setExpertMode(cli.isSet(expert));
+    DriveController ctl;   // expert mode only via View menu with confirmation
     MainWindow win(&ctl);
     if (cli.isSet(tab)) QTimer::singleShot(0, &win, [&win, &cli, tab] { win.showTab(cli.value(tab).toInt()); });
     if (cli.isSet(size)) {
