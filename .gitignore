@@ -13,3 +13,4 @@ slprj/
 *.asv
 matlab/reports/*.log
 matlab/slcov_output/
+matlab/reports/P1b_Vergleich.mldatx
