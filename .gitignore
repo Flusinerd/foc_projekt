@@ -4,3 +4,12 @@ scope.csv
 .vscode/
 .vs/
 out/
+
+# MATLAB/Simulink
+slprj/
+*_ert_rtw/
+*.slxc
+*.autosave
+*.asv
+matlab/reports/*.log
+matlab/slcov_output/

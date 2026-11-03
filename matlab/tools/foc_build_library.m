@@ -93,6 +93,15 @@ for k = 1:numel(components)
     fprintf('  verlinkt: %s -> %s\n', blk, ref);
 end
 set_param(app, 'Description', ['Anwendung Drehzahlregelung (CarPediem). Komponenten aus ' lib '.']);
+% Coverage war im Altmodell aktiv; ohne Simulink-Coverage-Lizenz nur Warnungen -> abschalten
+if ~license('test', 'Simulink_Coverage')
+    try
+        set_param(app, 'CovEnable', 'off');
+        fprintf('  Coverage abgeschaltet (keine Simulink-Coverage-Lizenz).\n');
+    catch err
+        fprintf('  Hinweis: Coverage nicht abschaltbar (%s)\n', err.message);
+    end
+end
 save_system(app);
 
 % ---- 4. Kurzpruefung: Modell laesst sich uebersetzen --------------------------------------
