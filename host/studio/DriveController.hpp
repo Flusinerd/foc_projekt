@@ -33,12 +33,13 @@ public:
 
     /// Expert mode: editing parameters, full scope, calibrations, virtual drive settings.
     bool expertMode() const { return expert_; }
-    void setExpertMode(bool on)
-    {
-        if (on == expert_) return;
-        expert_ = on;
-        Q_EMIT expertModeChanged(on);
-    }
+    void setExpertMode(bool on);
+
+    /// Telemetry slots (max. FOCP_TELEM_SLOTS). The speed is always kept for the dashboard.
+    static std::vector<int> defaultScopeSignals();
+    void setScopeSignals(std::vector<int> signalIdx, int divider);
+    const std::vector<int>& scopeSignals() const { return scopeSignals_; }
+    int scopeDivider() const { return scopeDivider_; }
 
     // snapshot, refreshed every poll
     const fochost::DriveStatus& status() const { return status_; }
@@ -52,6 +53,7 @@ public:
 Q_SIGNALS:
     void connectionChanged(bool connected);
     void expertModeChanged(bool on);
+    void scopeConfigChanged();
     void updated();
 
 private:
@@ -72,6 +74,8 @@ private:
     unsigned refSerial_ = 0;
 
     bool expert_ = false;
+    std::vector<int> scopeSignals_ = defaultScopeSignals();
+    int scopeDivider_ = 20;   // f_PWM / 20, e.g. 1 kHz at 20 kHz
     bool demo_ = false;
     int demoPhase_ = -1;
     qint64 demoT0_ = 0;

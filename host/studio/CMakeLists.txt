@@ -10,6 +10,9 @@ target_link_libraries(focstudio_core PUBLIC fochost Qt6::Core)
 qt_add_executable(focstudio WIN32
     main.cpp
     ParametersPage.cpp ParametersPage.hpp
+    ScopeWidget.cpp ScopeWidget.hpp
+    ScopePage.cpp ScopePage.hpp
+    CommissioningPage.cpp CommissioningPage.hpp
     MainWindow.cpp MainWindow.hpp
     DriveController.cpp DriveController.hpp
     ConnectionDialog.cpp ConnectionDialog.hpp

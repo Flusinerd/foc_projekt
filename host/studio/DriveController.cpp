@@ -2,6 +2,8 @@
 
 #include <QDateTime>
 
+#include <algorithm>
+
 using namespace fochost;
 
 namespace {
@@ -51,10 +53,34 @@ void DriveController::setReference(float v)
     ++refSerial_;
 }
 
+void DriveController::setExpertMode(bool on)
+{
+    if (on == expert_) return;
+    expert_ = on;
+    if (!on && scopeSignals_ != defaultScopeSignals())
+        setScopeSignals(defaultScopeSignals(), kTelemDivider);   // back to the overview signals
+    Q_EMIT expertModeChanged(on);
+}
+
+std::vector<int> DriveController::defaultScopeSignals()
+{
+    return {FOCP_S_SPEED, FOCP_S_SPEED_REF, FOCP_S_IQ, FOCP_S_IQ_REF};
+}
+
+void DriveController::setScopeSignals(std::vector<int> signalIdx, int divider)
+{
+    signalIdx.erase(std::remove(signalIdx.begin(), signalIdx.end(), int(FOCP_S_SPEED)), signalIdx.end());
+    signalIdx.insert(signalIdx.begin(), FOCP_S_SPEED);
+    if (signalIdx.size() > FOCP_TELEM_SLOTS) signalIdx.resize(FOCP_TELEM_SLOTS);
+    scopeSignals_ = signalIdx;
+    scopeDivider_ = std::clamp(divider, 1, 10000);
+    if (dev_.connected()) startTelemetry();
+    Q_EMIT scopeConfigChanged();
+}
+
 void DriveController::startTelemetry()
 {
-    // The dashboard needs the speed; the remaining slots are filled by the scope later.
-    dev_.configureScope({FOCP_S_SPEED, FOCP_S_SPEED_REF, FOCP_S_IQ, FOCP_S_IQ_REF}, kTelemDivider);
+    dev_.configureScope(scopeSignals_, uint16_t(scopeDivider_));
     dev_.runScope(true);
 }
 

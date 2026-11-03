@@ -18,10 +18,15 @@ public:
 private:
     void openConnectionDialog();
     void onConnectionChanged(bool connected);
+    void onExpertToggled(bool on);
+    void onExpertMode(bool on);
     void refreshStatusBar();
 
     DriveController* ctl_;
     QTabWidget* tabs_ = nullptr;
+    QWidget* scopePage_ = nullptr;
+    QWidget* commissioningPage_ = nullptr;
+    QAction* actExpert_ = nullptr;
     QAction* actConnect_ = nullptr;
     QAction* actDisconnect_ = nullptr;
     QPushButton* stop_ = nullptr;

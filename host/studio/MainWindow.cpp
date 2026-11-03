@@ -1,10 +1,13 @@
 #include "MainWindow.hpp"
 
+#include "CommissioningPage.hpp"
 #include "ConnectionDialog.hpp"
 #include "ControlPanel.hpp"
 #include "DashboardPage.hpp"
 #include "DriveController.hpp"
 #include "ParametersPage.hpp"
+#include "ScopePage.hpp"
+#include "ScopeWidget.hpp"
 
 #include <QAction>
 #include <QApplication>
@@ -14,6 +17,7 @@
 #include <QMessageBox>
 #include <QPushButton>
 #include <QShortcut>
+#include <QSignalBlocker>
 #include <QStatusBar>
 #include <QTabWidget>
 #include <QToolBar>
@@ -42,6 +46,13 @@ MainWindow::MainWindow(DriveController* ctl, QWidget* parent) : QMainWindow(pare
     file->addAction(actDemo);
     file->addSeparator();
     file->addAction(actQuit);
+
+    QMenu* view = menuBar()->addMenu(tr("&View"));
+    actExpert_ = new QAction(tr("&Expert mode"), this);
+    actExpert_->setCheckable(true);
+    actExpert_->setChecked(ctl_->expertMode());
+    connect(actExpert_, &QAction::toggled, this, &MainWindow::onExpertToggled);
+    view->addAction(actExpert_);
 
     // --- toolbar with the always-visible STOP -------------------------------------------
     auto* tb = addToolBar(tr("Drive"));
@@ -74,10 +85,18 @@ MainWindow::MainWindow(DriveController* ctl, QWidget* parent) : QMainWindow(pare
     tabs_ = new QTabWidget;
     auto* overview = new QWidget;
     auto* ov = new QHBoxLayout(overview);
-    ov->addWidget(new DashboardPage(ctl_), 3);
+    auto* left = new QVBoxLayout;
+    left->addWidget(new DashboardPage(ctl_), 0);
+    auto* simpleScope = new ScopeWidget(ctl_);
+    simpleScope->setWanted(DriveController::defaultScopeSignals());   // speed and q-current, fixed
+    simpleScope->setWindow(10.0);
+    left->addWidget(simpleScope, 1);
+    ov->addLayout(left, 3);
     ov->addWidget(new ControlPanel(ctl_), 2);
     tabs_->addTab(overview, tr("&Overview"));
     tabs_->addTab(new ParametersPage(ctl_), tr("&Parameters"));
+    scopePage_ = new ScopePage(ctl_);
+    commissioningPage_ = new CommissioningPage(ctl_);
     setCentralWidget(tabs_);
 
     connLabel_ = new QLabel;
@@ -86,8 +105,45 @@ MainWindow::MainWindow(DriveController* ctl, QWidget* parent) : QMainWindow(pare
     statusBar()->addPermanentWidget(fwLabel_);
 
     connect(ctl_, &DriveController::connectionChanged, this, &MainWindow::onConnectionChanged);
+    connect(ctl_, &DriveController::expertModeChanged, this, &MainWindow::onExpertMode);
     connect(ctl_, &DriveController::updated, this, &MainWindow::refreshStatusBar);
     onConnectionChanged(ctl_->isConnected());
+    onExpertMode(ctl_->expertMode());
+}
+
+void MainWindow::onExpertToggled(bool on)
+{
+    if (on && !ctl_->expertMode()) {
+        const auto answer = QMessageBox::warning(
+            this, tr("Expert mode"),
+            tr("Expert mode allows changing controller and motor parameters, running calibrations and recording "
+               "raw signals.\n\nWrong values can make the drive unstable or damage motor and power stage. "
+               "Continue?"),
+            QMessageBox::Yes | QMessageBox::Cancel, QMessageBox::Cancel);
+        if (answer != QMessageBox::Yes) {
+            const QSignalBlocker block(actExpert_);
+            actExpert_->setChecked(false);
+            return;
+        }
+    }
+    ctl_->setExpertMode(on);
+}
+
+void MainWindow::onExpertMode(bool on)
+{
+    {
+        const QSignalBlocker block(actExpert_);
+        actExpert_->setChecked(on);
+    }
+    const int scopeIdx = tabs_->indexOf(scopePage_);
+    if (on && scopeIdx < 0) {
+        tabs_->addTab(scopePage_, tr("&Scope"));
+        tabs_->addTab(commissioningPage_, tr("&Commissioning"));
+    } else if (!on && scopeIdx >= 0) {
+        tabs_->removeTab(tabs_->indexOf(commissioningPage_));
+        tabs_->removeTab(tabs_->indexOf(scopePage_));
+    }
+    setWindowTitle(on ? tr("FOC Studio – expert mode") : tr("FOC Studio"));
 }
 
 void MainWindow::openConnectionDialog()
