@@ -146,7 +146,20 @@ matlab/            modellbasierte Firmware (Arbeitsbereich dieses Agenten)
   tests/           test_config.m (+ künftige Testdateien)
   models/          focLib.slx, app_speed.slx; legacy/ = Referenz (nur lesen)
   reports/         Berichte, Kennzahlen, Plots
-docs/              Konzept, Befunde, Anleitung P0/P1
-protocol/ firmware/ host/   C/C++-Teil (Protokoll FOCP, PC-Tool FOC Studio) – nicht anfassen,
-                   solange die C-Code-Frage offen ist. Bauen nur auf Anweisung (CMake).
+docs/              Konzept, Befunde, Anleitung P0/P1, Installation, GUI-Entscheidungen, Lizenzen
+protocol/ firmware/  Firmware-C-Code (Protokoll FOCP, Target-Anbindung) – nicht anfassen,
+                   solange die C-Code-Frage offen ist.
+host/              PC-Teil (kein Firmware-Code), ändern nur auf Anweisung des Menschen
+  core/            fochost: Transporte (Sim, CANable/gs_usb, SocketCAN, PCAN), Device – Qt-frei halten
+  studio/          FOC Studio (Qt 6 Widgets, Qwt), Übersetzungen in translations/
+  app/             focstudio-dev (ImGui), Entwicklerwerkzeug
+  tests/           ctest-Tests;  bench/  Plot-Benchmark (eigenständig)
+cmake/             Qwt.cmake (FetchContent), Packaging.cmake (CPack/NSIS)
 ```
+
+PC-Teil bauen (Windows, Developer PowerShell; Qt 6 MSVC 2022 64-bit, Details in `docs/Installation.md`):
+```powershell
+cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH=C:/Qt/6.12.0/msvc2022_64
+cmake --build build; ctest --test-dir build --output-on-failure
+```
+Auch für FOC Studio gilt Regel 4: Verbindungen zu echter Hardware (CANable, PCAN, „Verbindung testen“) und Freigaben nur mit Zustimmung des Menschen; Tests mit dem virtuellen Antrieb (`--demo`).

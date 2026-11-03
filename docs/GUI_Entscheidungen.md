@@ -77,3 +77,32 @@ Die Umsetzung folgt der Schnittstellenbeschreibung des gs_usb-Protokolls, Code w
 | Test | `test_gsusb`: Bit-Timing (48 und 170 MHz), Rahmenlayout, Reihenfolge der Steueranfragen, nicht einstellbare Bitrate, Ende-zu-Ende `Device` ↔ `GsUsbTransport` ↔ simuliertes Gerät ↔ virtueller Antrieb mit eingestreutem Fremdverkehr |
 
 **Nicht geprüft:** Betrieb mit dem echten CANable am Antrieb (braucht die Freigabe des Anwenders) und die tatsächliche Rahmenrate unter Last.
+
+## 5. Bedienkonzept
+
+| Punkt | Entscheidung | Grund |
+|---|---|---|
+| Abfrage des Antriebs | `DriveController` fragt `fochost::Device` per `QTimer` alle 33 ms ab und hält einen Schnappschuss; Seiten lesen nach `updated()` | Vorgabe; `host/core` bleibt Qt-frei |
+| STOPP | Knopf in der Werkzeugleiste (immer sichtbar), **Leertaste und Esc als Anwendungs-Shortcut**, auch in Dialogen; der Knopf nimmt keinen Fokus | Vorgabe. Folge: Leertaste betätigt keine anderen Knöpfe, Esc schließt keine Dialoge. Tastaturbedienung über Alt + unterstrichenen Buchstaben, Enter, Tab |
+| Sicherheitsdialog | vor der ersten Freigabe **je Programmsitzung an echter Hardware**, vier Punkte abhaken (Alt+1…4), Abbrechen ist Standard. Beim virtuellen Antrieb kein Dialog | Inhalt nach AGENTS.md §5 Schritt 8; in der Simulation ohne Nutzen |
+| Expertenmodus | *Ansicht → Expertenmodus* mit Warnung, Abbrechen ist Standard. Keine Startoption (`--expert` auf Wunsch entfernt) | Befragung: Bestätigungsdialog |
+| Telemetrie-Kanäle | 8 Kanäle; die Drehzahl ist immer belegt (Dashboard). Normalmodus: Drehzahl, Drehzahl-Soll, i_q, i_q-Soll; das Experten-Scope belegt den Rest, beim Verlassen des Expertenmodus wird zurückgesetzt | ein Gerät, ein Telemetrie-Satz |
+| Sollwert | wird zentral im `DriveController` gesendet und gemerkt, alle Ansichten zeigen den zuletzt gesendeten Wert | sonst zeigt die Bedienung nach der Demo einen falschen Wert |
+| Parameter | Änderungen sammeln, erst mit „Übernehmen“ schreiben; JSON mit Format-, Protokoll- und Tabellenversion, Import prüft ID+Name+Bereich | Vorgabe; Werkstatt kann Stände sichern (Export auch im Normalmodus) |
+| Ereignisse | `LogEntry` um Art/Code/Detail/Folgenummer erweitert (API nur erweitert), Texte formuliert die GUI selbst → übersetzbar; Tagesdatei in `AppLocalDataLocation/logs` | `host/core` erzeugte nur deutsche Fertigtexte |
+| Demo (`--demo`) | nur virtueller Antrieb; endet mit Überspannung (sim.Udc 33 V), die der Anwender quittiert | zeigt die Fehleranzeige |
+
+## 6. Übersetzung
+
+- Quellsprache im Code Englisch (`tr()`), `focstudio_de.ts` vollständig (271 Texte), `focstudio_en.ts` nur Pluralformen.
+- `qt_add_translations(... MERGE_QT_TRANSLATIONS)`: Die Qt-eigenen Texte (Ja/Abbrechen, Dateidialog) stecken in denselben `.qm`-Dateien, die in die exe eingebettet sind. Es werden keine Übersetzungsdateien ausgeliefert.
+- Sprache: Systemsprache, umstellbar unter *Ansicht → Sprache*, wirkt nach Neustart (einfacher und robuster als Umschalten zur Laufzeit).
+- Zahlen nach Gebietsschema (Dezimalkomma). **Offen:** Einheiten der Signale in den Plots kommen aus der Protokolltabelle (`rpm`, `degC`) und bleiben englisch.
+
+## 7. Installer
+
+- **NSIS über CPack** (Entscheidung des Anwenders), zusätzlich ZIP für portable Nutzung.
+- Qt-Teil über `qt_generate_deploy_app_script` (ruft `windeployqt`), MSVC-Laufzeit app-lokal über `InstallRequiredSystemLibraries` (kein vc_redist, keine Adminrechte für die Laufzeit nötig).
+- Weggelassen: DXC/D3D-Compiler, Software-OpenGL, TLS- und Netzwerk-Plugins. Paketgröße: Setup 10,1 MB, ZIP 13,3 MB (Version 0.1.0).
+- Geprüft: Das entpackte Paket startet ohne Qt im `PATH`. Der NSIS-Installer selbst wurde nicht ausgeführt (würde nach „Programme“ installieren).
+- **Offen:** Programmsymbol (Icon) und Code-Signatur; ohne Signatur warnt Windows SmartScreen beim ersten Start des Setups.
