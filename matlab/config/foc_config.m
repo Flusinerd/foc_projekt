@@ -50,6 +50,13 @@ switch lower(profile)
         error('foc:config', 'Unbekanntes Profil "%s" (legacy_f2838 | datasheet)', profile);
 end
 
+% Untergrenze des Drehzahlreglers (Iq_ref in PU, A2): legacy bitgleich zum Altmodell (-0,5,
+% "leichtes Bremsen"); datasheet 0 = Ausrollen, weil ein Labornetzteil keine Rueckspeisung aufnimmt.
+switch lower(profile)
+    case 'legacy_f2838', v.ctrl_limits.Iq_min = -0.5;
+    otherwise,           v.ctrl_limits.Iq_min = 0;
+end
+
 % Wird im Modell als Variant-Bedingung ~isequal(dataType,'single') genutzt,
 % steht aber nicht in der .mat-Datei.
 if exist('fixdt', 'file') || exist('fixdt', 'builtin')

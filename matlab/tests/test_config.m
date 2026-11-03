@@ -22,7 +22,8 @@ for k = 1:numel(names)
     end
     nfail = nfail + compare(n, ref.(n), cfg.vars.(n));
 end
-extra = setdiff(fieldnames(cfg.vars), [names; {'dataType'}]);
+extra = setdiff(fieldnames(cfg.vars), [names; {'dataType'; 'ctrl_limits'}]);
+nfail = nfail + check('legacy: ctrl_limits.Iq_min', cfg.vars.ctrl_limits.Iq_min, -0.5, 0);
 if ~isempty(extra)
     fprintf('FAIL  legacy: zusaetzliche Variablen %s\n', strjoin(extra', ', ')); nfail = nfail + 1;
 end
@@ -40,6 +41,7 @@ nfail = nfail + check('PWM-Periode [Ticks]', b.PWM_Counter_Period, 5000, 0);
 % PU-Basis wie im Modell (B4): 2048 Counts * 3,36 V/4095 / 0,03 V/A, SVM-Grenze 24 V/sqrt(3)
 nfail = nfail + check('I_base aus Strommesskette [A]', pu.I_base, 56.01, 0.01);
 nfail = nfail + check('V_base SVM [V]', pu.V_base, 13.856, 0.001);
+nfail = nfail + check('datasheet: ctrl_limits.Iq_min (Labornetzteil)', c.vars.ctrl_limits.Iq_min, 0, 0);
 nfail = nfail + check('Strom-Tn = L/R', p.Ti_i, m.Lq/m.Rs, 1e-12);
 nfail = nfail + check('Strom-Ki = Kp/Tn', p.Ki_i, p.Kp_i/p.Ti_i, 1e-9);
 % Betragsoptimum in SI zurueckrechnen
@@ -61,7 +63,8 @@ need = {'pmsm_ECI6360.p','pmsm_ECI6360.Rs','pmsm_ECI6360.Ld','pmsm_ECI6360.Lq','
     'target_f2838.CPU_frequency','target_f2838.PWM_Counter_Period','PU_System.I_base','PU_System.N_base', ...
     'PI_params.Kp_i','PI_params.Ki_i','PI_params.Kp_id','PI_params.Ki_id','PI_params.Ki_texas', ...
     'PI_params.Ki_d_texas','PI_params.Kp_speed','PI_params.Ki_speed_texas','PI_params.Ki_speed', ...
-    'T_pwm','Ts','Ts_inverter','Ts_motor','Ts_simulink','Ts_speed','availableSpeedModes','dataType'};
+    'T_pwm','Ts','Ts_inverter','Ts_motor','Ts_simulink','Ts_speed','availableSpeedModes','dataType', ...
+    'ctrl_limits.Iq_min'};
 for prof = {'legacy_f2838', 'datasheet'}
     v = foc_config(prof{1}).vars;
     for k = 1:numel(need)
