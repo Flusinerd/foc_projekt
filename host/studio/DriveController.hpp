@@ -21,6 +21,11 @@ public:
 
     void stop() { if (dev_.connected()) dev_.disable(); }
 
+    /// Sends the setpoint and remembers it, so every view shows what the drive really got.
+    void setReference(float v);
+    float lastReference() const { return lastRef_; }
+    unsigned referenceSerial() const { return refSerial_; }   ///< changes with every send
+
     /// Connect to the virtual drive and run the demo profile (Hall calibration, speed steps, load).
     bool startDemo(QString& error);
 
@@ -53,6 +58,8 @@ private:
     std::vector<fochost::ParamState> params_;
     bool speedValid_ = false;
     double speed_ = 0.0;
+    float lastRef_ = 0.0f;
+    unsigned refSerial_ = 0;
 
     bool demo_ = false;
     int demoPhase_ = -1;

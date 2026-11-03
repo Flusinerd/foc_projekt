@@ -7,6 +7,7 @@ qt_add_executable(focstudio WIN32
     MainWindow.cpp MainWindow.hpp
     DriveController.cpp DriveController.hpp
     ConnectionDialog.cpp ConnectionDialog.hpp
+    ControlPanel.cpp ControlPanel.hpp
     DashboardPage.cpp DashboardPage.hpp
     FaultText.cpp FaultText.hpp
 )

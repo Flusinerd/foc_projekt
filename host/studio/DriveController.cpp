@@ -1,4 +1,4 @@
-#include "DriveController.hpp"
+﻿#include "DriveController.hpp"
 
 #include <QDateTime>
 
@@ -41,6 +41,14 @@ void DriveController::disconnectFrom()
     speedValid_ = false;
     Q_EMIT connectionChanged(false);
     poll();
+}
+
+void DriveController::setReference(float v)
+{
+    if (!dev_.connected()) return;
+    dev_.setReference(v);
+    lastRef_ = v;
+    ++refSerial_;
 }
 
 void DriveController::startTelemetry()
@@ -95,12 +103,12 @@ void DriveController::demoStep()
     if (phase(0, 0.6) && status_.state == FOCP_ST_READY) { dev_.calibrate(FOCP_CALIB_HALL); demoPhase_ = 0; }
     if (phase(1, 3.4) && status_.state == FOCP_ST_READY) {
         dev_.writeParam(FOCP_P_CTRL_MODE, FOCP_MODE_SPEED);
-        dev_.setReference(1500);
+        setReference(1500);
         dev_.enable();
         demoPhase_ = 1;
     }
     if (phase(2, 5.5)) { dev_.writeParam(FOCP_P_SIM_T_LOAD, 0.3f); demoPhase_ = 2; }
-    if (phase(3, 7.0)) { dev_.setReference(3000); demoPhase_ = 3; }
-    if (phase(4, 9.0)) { dev_.writeParam(FOCP_P_SIM_T_LOAD, 0.0f); dev_.setReference(-1000); demoPhase_ = 4; }
+    if (phase(3, 7.0)) { setReference(3000); demoPhase_ = 3; }
+    if (phase(4, 9.0)) { dev_.writeParam(FOCP_P_SIM_T_LOAD, 0.0f); setReference(-1000); demoPhase_ = 4; }
     if (phase(5, 11.5)) { demo_ = false; demoPhase_ = 5; }
 }

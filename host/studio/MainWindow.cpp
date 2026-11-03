@@ -1,11 +1,13 @@
 #include "MainWindow.hpp"
 
 #include "ConnectionDialog.hpp"
+#include "ControlPanel.hpp"
 #include "DashboardPage.hpp"
 #include "DriveController.hpp"
 
 #include <QAction>
 #include <QApplication>
+#include <QHBoxLayout>
 #include <QLabel>
 #include <QMenuBar>
 #include <QMessageBox>
@@ -69,7 +71,11 @@ MainWindow::MainWindow(DriveController* ctl, QWidget* parent) : QMainWindow(pare
 
     // --- pages ------------------------------------------------------------------------
     tabs_ = new QTabWidget;
-    tabs_->addTab(new DashboardPage(ctl_), tr("&Overview"));
+    auto* overview = new QWidget;
+    auto* ov = new QHBoxLayout(overview);
+    ov->addWidget(new DashboardPage(ctl_), 3);
+    ov->addWidget(new ControlPanel(ctl_), 2);
+    tabs_->addTab(overview, tr("&Overview"));
     setCentralWidget(tabs_);
 
     connLabel_ = new QLabel;
