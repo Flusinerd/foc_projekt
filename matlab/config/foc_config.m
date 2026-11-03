@@ -52,9 +52,15 @@ end
 
 % Untergrenze des Drehzahlreglers (Iq_ref in PU, A2): legacy bitgleich zum Altmodell (-0,5,
 % "leichtes Bremsen"); datasheet 0 = Ausrollen, weil ein Labornetzteil keine Rueckspeisung aufnimmt.
+% reset_I_freemode: I-Anteil des Drehzahlreglers im Freemode auf 0 halten (sonst bleibt mit
+% Iq_min = 0 ein kleiner positiver Rest stehen, SW_ANF_05). legacy 0 = Verhalten wie Altmodell.
 switch lower(profile)
-    case 'legacy_f2838', v.ctrl_limits.Iq_min = -0.5;
-    otherwise,           v.ctrl_limits.Iq_min = 0;
+    case 'legacy_f2838'
+        v.ctrl_limits.Iq_min = -0.5;
+        v.ctrl_limits.reset_I_freemode = 0;
+    otherwise
+        v.ctrl_limits.Iq_min = 0;
+        v.ctrl_limits.reset_I_freemode = 1;
 end
 
 % Wird im Modell als Variant-Bedingung ~isequal(dataType,'single') genutzt,
