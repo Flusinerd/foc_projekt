@@ -1,5 +1,28 @@
 # External Mode – Machbarkeit und erster Test (2026-11-03) – ANGEHALTEN (Linker, Prüfmodell)
 
+## Nachtrag 4: UART-Grundtest ohne XCP – kein Byte auf COM4, Firmware nachweislich richtig
+
+**Testmodell:** `foc_build_uart_probe` → `matlab/models/test/foc_uart_probe.slx`. Ein uint8-Zähler alle 10 ms geht über SCI_A als Rahmen `'S' <n> 'E'` hinaus, bei 115207 Bd. Kein External Mode, keine PWM, Heartbeat-LED GPIO56.
+
+| Lauf | SCI_A-Pins | Neustart nach Flash | COM4 |
+|---|---|---|---|
+| 1 | GPIO84 TX / GPIO85 RX (Hardware-Überblick) | nein | 0 Byte in 1,5 s |
+| 2 | **GPIO42 TX / GPIO43 RX** (Schaltplan MA Darici, Abb. 5.8, siehe unten) | nein | 0 Byte |
+| 3 | GPIO42/43 | **ja, LED blinkt** | 0 Byte bei 115200, 57600, 230400, 9600 Bd |
+
+**Schaltplan (vom Menschen geliefert, Abb. 5.8 MA Darici, FT2232HL):** BDBUS0 (Pin 38, FT-TXD, Beschriftung „SCI-RX“) → Netz **USB_P**; BDBUS1 (Pin 39, FT-RXD, „SCI-TX“) → Netz **USB_N**. Die Netznamen deuten auf die USB-Pins des F2838x (USB0DP = GPIO43, USB0DM = GPIO42); beide lassen sich als SCIA_RX/TX schalten (wie beim LaunchPad F28379D). Wohin USB_P/USB_N auf der MCU-Seite gehen, zeigt der Ausschnitt **nicht**.
+
+**Generierter Code (`foc_uart_probe_ert_rtw/MW_c28xx_csl.c`, `MW_c28xx_board.c`):** `GPBGMUX1/GPBMUX1.GPIO42 = 3` („Configure GPIO42 as SCITXDA“), `GPBAMSEL.GPIO42/43 = 0` (digital), `SCILBAUD = 216` (200 MHz → 115207 Bd), `SCICTL1.TXENA = 1`. Senden über `SciaRegs.SCITXBUF`. **Die Firmwareseite ist korrekt.**
+
+**Bewertung:** Das Programm läuft (LED), SCIA sendet auf GPIO42 (bzw. vorher 84), auf COM4 kommt nichts an. Die Ursache liegt auf der **Hardwareseite**: Verbindung MCU ↔ FT2232 Kanal B (Netze USB_P/USB_N, eventuell unbestückte 0-Ω-Brücken, Änderungen laut `Erratas.xlsx`) oder Konfiguration des FT2232-Kanals B im EEPROM (XDS100-Firmware).
+
+**Messvorschlag (Mensch), während der UART-Test läuft (im Flash):**
+1. Oszilloskop an **GPIO42** (MCU-Pin): Sieht man 115-kBd-Bursts alle 10 ms? Wenn nein, ist der Pin nicht verbunden bzw. ein anderer Pin aus dem Gehäuse.
+2. Oszilloskop an **FT2232 Pin 39 (BDBUS1)**: Kommen die Bursts dort an? Wenn ja und COM4 bleibt leer, liegt es am FT2232-Kanal B (EEPROM/Treiber). Wenn nein, ist die Leiterbahn zwischen MCU und FT2232 unterbrochen oder geht woanders hin.
+3. Netz USB_P/USB_N im vollständigen Schaltplan (`CarPediem_Motorcontroller_schematic.pdf`) nachverfolgen; `Erratas.xlsx` beim Institut anfragen.
+
+**Bis dahin:** Beobachtung auf der Hardware über den **CCS-Debugger (JTAG)**, der zuverlässig funktioniert.
+
 ## Nachtrag 3: nach Power-Cycle – Target antwortet nicht auf XCP über COM4
 
 - Der Mensch hat die Steuerplatine aus- und eingeschaltet; die **Heartbeat-LED (GPIO56) blinkt** mit 2 Hz. Das Prüfmodell läuft also aus dem Flash.
