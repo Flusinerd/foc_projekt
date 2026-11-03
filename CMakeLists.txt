@@ -26,9 +26,14 @@ add_library(fochost STATIC
     host/core/src/SimTransport.cpp
     host/core/src/VirtualDrive.cpp
     host/core/src/CanTransports.cpp
+    host/core/src/GsUsbTransport.cpp
+    host/core/src/GsUsbWinUsb.cpp
 )
 target_include_directories(fochost PUBLIC host/core/include)
 target_link_libraries(fochost PUBLIC focp Threads::Threads ${CMAKE_DL_LIBS})
+if(WIN32)
+    target_link_libraries(fochost PUBLIC winusb setupapi)
+endif()
 if(MSVC)
     target_compile_options(fochost PRIVATE /W4)
 else()
@@ -57,4 +62,8 @@ if(FOC_BUILD_TESTS)
     add_executable(test_device host/tests/test_device.cpp)
     target_link_libraries(test_device PRIVATE fochost)
     add_test(NAME device_sim COMMAND test_device)
+
+    add_executable(test_gsusb host/tests/test_gsusb.cpp)
+    target_link_libraries(test_gsusb PRIVATE fochost)
+    add_test(NAME gsusb COMMAND test_gsusb)
 endif()

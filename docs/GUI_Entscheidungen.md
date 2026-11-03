@@ -59,4 +59,21 @@ Die Messreihe wurde nach diesen Läufen abgebrochen. JKQtPlotter lag in allen L�
 
 ## 4. CANable-Transport (gs_usb)
 
-*Offen. Prüfung vorhandener Bibliotheken (z. B. candle_api) und ihrer Lizenzen folgt in Schritt 4.*
+**Entscheidung: eigene Umsetzung `GsUsbTransport` in `host/core`** (Qt-frei), unter Windows über WinUSB. Unter Linux kein eigener Treiber nötig: Der Kernel-Treiber `gs_usb` stellt den Adapter als SocketCAN-Schnittstelle (`can0`) bereit, dafür gibt es den SocketCAN-Transport.
+
+Geprüfte Alternative: **candle_api / candle_dll** (H. Denkmair). Nicht verwendet, weil
+- Lizenz LGPL 3: zulässig, aber nur als dynamisch gelinkte DLL sinnvoll handhabbar,
+- letzte Änderung 2017, nur Windows, eigene CMake-Einbindung nötig,
+- das Protokoll klein ist: vier Steueranfragen (HOST_FORMAT, BT_CONST, BITTIMING, MODE) und 20-Byte-Bulk-Rahmen, little endian.
+
+Die Umsetzung folgt der Schnittstellenbeschreibung des gs_usb-Protokolls, Code wurde nicht übernommen.
+
+| Punkt | Umsetzung |
+|---|---|
+| Treiber | WinUSB; candleLight meldet die Interface-GUID `{c15b4308-04d3-11e6-b3ea-6057189e6443}` per MS-OS-Deskriptor, Windows bindet WinUSB ohne Installation (am Labor-PC geprüft) |
+| Adaptersuche | `gsusb::listDevices()` über SetupAPI, nur Aufzählen, kein Öffnen |
+| Bitrate | 125k/250k/500k/1M; Bit-Timing aus `BT_CONST` des Adapters berechnet: nur exakte Teiler, 8–25 Zeitquanten, Abtastpunkt möglichst 87,5 %. CANable (bxCAN 48 MHz): 16 tq, 87,5 % für alle vier Bitraten |
+| Empfang | 8 überlappte Bulk-Lesevorgänge stehen ständig aus, damit bei Scope-Telemetrie (mehrere tausend Rahmen/s) keine Rahmen verloren gehen. TX-Echos, Fehlerrahmen, 29-Bit- und Fremd-IDs werden verworfen |
+| Test | `test_gsusb`: Bit-Timing (48 und 170 MHz), Rahmenlayout, Reihenfolge der Steueranfragen, nicht einstellbare Bitrate, Ende-zu-Ende `Device` ↔ `GsUsbTransport` ↔ simuliertes Gerät ↔ virtueller Antrieb mit eingestreutem Fremdverkehr |
+
+**Nicht geprüft:** Betrieb mit dem echten CANable am Antrieb (braucht die Freigabe des Anwenders) und die tatsächliche Rahmenrate unter Last.

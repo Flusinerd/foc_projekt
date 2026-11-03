@@ -154,7 +154,7 @@ void App::panelConnection()
         for (int i = 0; i < int(kinds.size()); ++i)
             if (ImGui::Selectable(transportName(kinds[i]), i == transportSel_)) {
                 transportSel_ = i;
-                std::strcpy(channel_, kinds[i] == TransportKind::PCAN ? "USB1" : "can0");
+                std::strcpy(channel_, kinds[i] == TransportKind::PCAN ? "USB1" : kinds[i] == TransportKind::GsUsb ? "" : "can0");
             }
         ImGui::EndCombo();
     }
@@ -162,7 +162,7 @@ void App::panelConnection()
     if (kind != TransportKind::Simulation) {
         ImGui::SetNextItemWidth(100);
         ImGui::InputText("Kanal", channel_, sizeof(channel_));
-        if (kind == TransportKind::PCAN) {
+        if (kind == TransportKind::PCAN || kind == TransportKind::GsUsb) {   // gs_usb: empty channel = first adapter
             ImGui::SameLine();
             ImGui::SetNextItemWidth(110);
             ImGui::Combo("##br", &bitrateSel_, kBitrateNames, IM_ARRAYSIZE(kBitrateNames));

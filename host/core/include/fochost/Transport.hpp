@@ -21,12 +21,13 @@ public:
     virtual bool receive(focp_msg_t& m, int timeoutMs) = 0;
 };
 
-enum class TransportKind { Simulation, SocketCAN, PCAN };
+/// Values are stored in user settings: append only, never renumber.
+enum class TransportKind { Simulation, SocketCAN, PCAN, GsUsb };
 
 struct TransportConfig {
     TransportKind kind = TransportKind::Simulation;
-    std::string channel = "can0";   ///< SocketCAN interface or PCAN channel ("USB1".."USB16")
-    int bitrate = 500000;           ///< PCAN only; SocketCAN bitrate is set via `ip link`
+    std::string channel = "can0";   ///< SocketCAN interface, PCAN channel ("USB1".."USB16") or gs_usb device path ("" = first)
+    int bitrate = 500000;           ///< PCAN and gs_usb; SocketCAN bitrate is set via `ip link`
 };
 
 std::unique_ptr<Transport> makeTransport(const TransportConfig& cfg);

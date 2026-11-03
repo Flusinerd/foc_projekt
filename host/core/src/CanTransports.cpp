@@ -1,4 +1,6 @@
 // CAN transports: SocketCAN (Linux) and PEAK PCAN-Basic (Windows/Linux, loaded at runtime).
+// gs_usb (CANable/candleLight) lives in GsUsbTransport.cpp / GsUsbWinUsb.cpp.
+#include "fochost/GsUsb.hpp"
 #include "fochost/SimTransport.hpp"
 #include "fochost/Transport.hpp"
 
@@ -248,6 +250,9 @@ std::unique_ptr<Transport> makeTransport(const TransportConfig& cfg)
     case TransportKind::SocketCAN:  return std::make_unique<SocketCanTransport>(cfg.channel);
 #endif
     case TransportKind::PCAN:       return std::make_unique<PcanTransport>(cfg.channel, cfg.bitrate);
+#ifdef _WIN32
+    case TransportKind::GsUsb:      return std::make_unique<GsUsbTransport>(gsusb::makeWinUsbIo(cfg.channel), cfg.bitrate);
+#endif
     default:                        return nullptr;
     }
 }
@@ -255,6 +260,9 @@ std::unique_ptr<Transport> makeTransport(const TransportConfig& cfg)
 std::vector<TransportKind> availableTransports()
 {
     std::vector<TransportKind> v{TransportKind::Simulation};
+#ifdef _WIN32
+    v.push_back(TransportKind::GsUsb);   // Linux: kernel driver gs_usb -> SocketCAN
+#endif
 #ifdef __linux__
     v.push_back(TransportKind::SocketCAN);
 #endif
@@ -268,6 +276,7 @@ const char* transportName(TransportKind k)
     case TransportKind::Simulation: return "Simulation (virtueller Antrieb)";
     case TransportKind::SocketCAN:  return "SocketCAN";
     case TransportKind::PCAN:       return "PEAK PCAN-USB";
+    case TransportKind::GsUsb:      return "CANable / candleLight (gs_usb)";
     }
     return "?";
 }
