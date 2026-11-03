@@ -1,0 +1,2 @@
+// Windows resources: program icon (Explorer, taskbar, installer shortcut).
+IDI_ICON1 ICON "icons/carpediem.ico"

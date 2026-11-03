@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128">
+  <title>CarpeDiem – Bildmarke</title>
+  <!-- Drehfeld: drei Phasen (je 120°), Feldvektor mit Sonne an der Spitze -->
+  <rect x="0" y="0" width="128" height="128" rx="26" fill="#FFFFFF"/>
+  <g transform="translate(64,64)" fill="none" stroke-linecap="round" stroke-width="13">
+    <path d="M-34.4 -22.3 A41 41 0 0 1 34.4 -22.3" stroke="#12355B"/>
+    <path d="M36.5 -18.6 A41 41 0 0 1 2.1 40.9" stroke="#1B8A8C"/>
+    <path d="M-2.1 40.9 A41 41 0 0 1 -36.5 -18.6" stroke="#F2A33A"/>
+    <line x1="0" y1="0" x2="13" y2="-13" stroke="#12355B" stroke-width="8"/>
+  </g>
+  <circle cx="64" cy="64" r="8" fill="#12355B"/>
+  <circle cx="80" cy="48" r="11" fill="#F2A33A"/>
+</svg>

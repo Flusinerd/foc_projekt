@@ -4,62 +4,62 @@
 <context>
     <name>AboutDialog</name>
     <message>
-        <location filename="../AboutDialog.cpp" line="18"/>
+        <location filename="../AboutDialog.cpp" line="19"/>
         <source>About FOC Studio</source>
         <translation>Über FOC Studio</translation>
     </message>
     <message>
-        <location filename="../AboutDialog.cpp" line="26"/>
-        <source>Operating and commissioning tool for the FOC framework (CarPediem, Hochschule Bochum).</source>
-        <translation>Bedien- und Inbetriebnahmewerkzeug für das FOC-Framework (CarPediem, Hochschule Bochum).</translation>
+        <location filename="../AboutDialog.cpp" line="35"/>
+        <source>Operating and commissioning tool for the FOC framework. Project CarpeDiem, Laboratory for Actuators, Hochschule Bochum.</source>
+        <translation>Bedien- und Inbetriebnahmewerkzeug für das FOC-Framework. Projekt CarpeDiem, Labor für Aktorik, Hochschule Bochum.</translation>
     </message>
     <message>
-        <location filename="../AboutDialog.cpp" line="29"/>
+        <location filename="../AboutDialog.cpp" line="39"/>
         <source>Program version:</source>
         <translation>Programmversion:</translation>
     </message>
     <message>
-        <location filename="../AboutDialog.cpp" line="30"/>
+        <location filename="../AboutDialog.cpp" line="40"/>
         <source>Protocol version (FOCP):</source>
         <translation>Protokollversion (FOCP):</translation>
     </message>
     <message>
-        <location filename="../AboutDialog.cpp" line="31"/>
+        <location filename="../AboutDialog.cpp" line="41"/>
         <source>%1 (%2 parameters, %3 signals)</source>
         <translation>%1 (%2 Parameter, %3 Signale)</translation>
     </message>
     <message>
-        <location filename="../AboutDialog.cpp" line="33"/>
+        <location filename="../AboutDialog.cpp" line="43"/>
         <source>Drive firmware:</source>
         <translation>Antriebs-Firmware:</translation>
     </message>
     <message>
-        <location filename="../AboutDialog.cpp" line="35"/>
+        <location filename="../AboutDialog.cpp" line="45"/>
         <source>%1.%2, board 0x%3, protocol %4</source>
         <translation>%1.%2, Platine 0x%3, Protokoll %4</translation>
     </message>
     <message>
-        <location filename="../AboutDialog.cpp" line="38"/>
+        <location filename="../AboutDialog.cpp" line="48"/>
         <source>not connected</source>
         <translation>nicht verbunden</translation>
     </message>
     <message>
-        <location filename="../AboutDialog.cpp" line="39"/>
+        <location filename="../AboutDialog.cpp" line="49"/>
         <source>Qt version:</source>
         <translation>Qt-Version:</translation>
     </message>
     <message>
-        <location filename="../AboutDialog.cpp" line="40"/>
+        <location filename="../AboutDialog.cpp" line="50"/>
         <source>&amp;Program</source>
         <translation>&amp;Programm</translation>
     </message>
     <message>
-        <location filename="../AboutDialog.cpp" line="46"/>
+        <location filename="../AboutDialog.cpp" line="56"/>
         <source>&amp;Licenses</source>
         <translation>&amp;Lizenzen</translation>
     </message>
     <message>
-        <location filename="../AboutDialog.cpp" line="50"/>
+        <location filename="../AboutDialog.cpp" line="60"/>
         <source>About &amp;Qt</source>
         <translation>Über &amp;Qt</translation>
     </message>

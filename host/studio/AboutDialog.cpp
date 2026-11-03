@@ -8,6 +8,7 @@
 #include <QFormLayout>
 #include <QLabel>
 #include <QMessageBox>
+#include <QPixmap>
 #include <QPushButton>
 #include <QTabWidget>
 #include <QTextBrowser>
@@ -22,8 +23,17 @@ AboutDialog::AboutDialog(DriveController* ctl, QWidget* parent) : QDialog(parent
 
     auto* info = new QWidget;
     auto* form = new QFormLayout(info);
+    auto* logo = new QLabel;
+    QPixmap pm(QStringLiteral(":/docs/img/logo/carpediem_logo.png"));
+    if (!pm.isNull()) {
+        pm.setDevicePixelRatio(pm.width() / 360.0);   // 360 px wide, sharp on high-DPI screens
+        logo->setPixmap(pm);
+    }
+    logo->setAccessibleName(QStringLiteral("CarpeDiem"));
+    form->addRow(logo);
     auto* title = new QLabel(QStringLiteral("<h2>FOC Studio</h2>") +
-                             tr("Operating and commissioning tool for the FOC framework (CarPediem, Hochschule Bochum)."));
+                             tr("Operating and commissioning tool for the FOC framework. Project CarpeDiem, "
+                                "Laboratory for Actuators, Hochschule Bochum."));
     title->setWordWrap(true);
     form->addRow(title);
     form->addRow(tr("Program version:"), new QLabel(QApplication::applicationVersion()));

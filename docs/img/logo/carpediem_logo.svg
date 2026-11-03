@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 140" width="480" height="140">
+  <title>CarpeDiem – Labor für Aktorik, Hochschule Bochum</title>
+  <!-- Bildmarke wie carpediem_mark.svg (ohne Hintergrund), rechts Wortmarke -->
+  <g transform="translate(70,70)" fill="none" stroke-linecap="round" stroke-width="12">
+    <path d="M-45.4 -29.4 A54 54 0 0 1 45.4 -29.4" stroke="#12355B"/>
+    <path d="M48.1 -24.5 A54 54 0 0 1 2.8 53.9" stroke="#1B8A8C"/>
+    <path d="M-2.8 53.9 A54 54 0 0 1 -48.1 -24.5" stroke="#F2A33A"/>
+    <line x1="0" y1="0" x2="18" y2="-18" stroke="#12355B" stroke-width="8"/>
+  </g>
+  <circle cx="70" cy="70" r="9" fill="#12355B"/>
+  <circle cx="92" cy="48" r="13" fill="#F2A33A"/>
+  <text x="146" y="74" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="46" font-weight="600" fill="#12355B">Carpe<tspan fill="#1B8A8C">Diem</tspan></text>
+  <text x="148" y="104" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="17" fill="#5A6B7B">Labor für Aktorik · Hochschule Bochum</text>
+</svg>

@@ -56,6 +56,14 @@ if(FOC_BUILD_GUI)
     include(cmake/Packaging.cmake)
 endif()
 
+# Icon generator (only needed when the logo changes, see host/studio/icons/README.md)
+option(FOC_BUILD_TOOLS "Build helper tools (svgicon)" OFF)
+if(FOC_BUILD_TOOLS)
+    find_package(Qt6 REQUIRED COMPONENTS Gui Svg)
+    add_executable(svgicon host/tools/svgicon.cpp)
+    target_link_libraries(svgicon PRIVATE Qt6::Gui Qt6::Svg)
+endif()
+
 # --- tests -----------------------------------------------------------------------------
 if(FOC_BUILD_TESTS)
     add_executable(test_protocol host/tests/test_protocol.cpp)

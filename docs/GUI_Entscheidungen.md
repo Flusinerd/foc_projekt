@@ -105,4 +105,5 @@ Die Umsetzung folgt der Schnittstellenbeschreibung des gs_usb-Protokolls, Code w
 - Qt-Teil über `qt_generate_deploy_app_script` (ruft `windeployqt`), MSVC-Laufzeit app-lokal über `InstallRequiredSystemLibraries` (kein vc_redist, keine Adminrechte für die Laufzeit nötig).
 - Weggelassen: DXC/D3D-Compiler, Software-OpenGL, TLS- und Netzwerk-Plugins. Paketgröße: Setup 10,1 MB, ZIP 13,3 MB (Version 0.1.0).
 - Geprüft: Das entpackte Paket startet ohne Qt im `PATH`. Der NSIS-Installer selbst wurde nicht ausgeführt (würde nach „Programme“ installieren).
-- **Offen:** Programmsymbol (Icon) und Code-Signatur; ohne Signatur warnt Windows SmartScreen beim ersten Start des Setups.
+- Programmsymbol: CarpeDiem-Bildmarke (Drehfeld aus drei Phasen, Feldvektor mit Sonne), Quelle `docs/img/logo/*.svg`, daraus erzeugt (`svgicon`, `-DFOC_BUILD_TOOLS=ON`): `host/studio/icons/carpediem.ico` für exe und Setup, PNGs für das Fenstersymbol, Logo im „Über“-Dialog.
+- **Offen:** Code-Signatur; ohne Signatur warnt Windows SmartScreen beim ersten Start des Setups.

@@ -1,3 +1,5 @@
+<img src="docs/img/logo/carpediem_logo.svg" alt="CarpeDiem – Labor für Aktorik, Hochschule Bochum" width="360">
+
 # FOC-Framework (CarPediem, 4. Generation)
 
 Ausbau der CarPediem-Firmware (Masterarbeit Akgül 2023) zu einem wiederverwendbaren FOC-Framework für den F28388D-Frequenzumrichter. Ziel sind Drehzahl- und Lageregelung mit Hall, sensorlos oder hybrid.

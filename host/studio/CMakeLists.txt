@@ -39,7 +39,16 @@ qt_add_translations(TARGETS focstudio
 qt_add_resources(focstudio docs
     PREFIX /docs
     BASE ${PROJECT_SOURCE_DIR}/docs
-    FILES ${PROJECT_SOURCE_DIR}/docs/LICENSES.md)
+    FILES ${PROJECT_SOURCE_DIR}/docs/LICENSES.md ${PROJECT_SOURCE_DIR}/docs/img/logo/carpediem_logo.png)
+
+# Program icon (generated from docs/img/logo, see icons/README.md)
+qt_add_resources(focstudio icons
+    PREFIX /
+    FILES icons/carpediem_16.png icons/carpediem_24.png icons/carpediem_32.png icons/carpediem_48.png
+          icons/carpediem_64.png icons/carpediem_128.png icons/carpediem_256.png)
+if(WIN32)
+    target_sources(focstudio PRIVATE focstudio.rc)
+endif()
 set_target_properties(focstudio PROPERTIES AUTOMOC ON)
 target_compile_definitions(focstudio PRIVATE
     FOC_STUDIO_VERSION="${PROJECT_VERSION}"

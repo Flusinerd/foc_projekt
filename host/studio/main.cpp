@@ -8,6 +8,7 @@
 
 #include <QApplication>
 #include <QCommandLineParser>
+#include <QIcon>
 #include <QLocale>
 #include <QSettings>
 #include <QTimer>
@@ -22,6 +23,9 @@ int main(int argc, char** argv)
     QApplication::setOrganizationDomain(QStringLiteral("hs-bochum.de"));
     QApplication::setApplicationName(QStringLiteral("FOC Studio"));
     QApplication::setApplicationVersion(QStringLiteral(FOC_STUDIO_VERSION));
+    QIcon icon;
+    for (int s : {16, 24, 32, 48, 64, 128, 256}) icon.addFile(QStringLiteral(":/icons/carpediem_%1.png").arg(s));
+    QApplication::setWindowIcon(icon);
 
     // UI language: setting "ui/language" ("de", "en"), empty = system language.
     // The .qm files contain Qt's own strings too (MERGE_QT_TRANSLATIONS).
