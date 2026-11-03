@@ -1,5 +1,9 @@
 # External Mode – Machbarkeit und erster Test (2026-11-03) – ANGEHALTEN (Linker, Prüfmodell)
 
+## Entscheidung (2026-11-03): External Mode/UART zurückgestellt
+
+Der Mensch hat entschieden, die serielle Schnittstelle vorerst nicht weiter zu verfolgen. Für Schritt 8 genügen JTAG (Flashen/Starten), Messgeräte (S1–S3) und der CCS-Debugger (S4/S5). Offen bleibt die UART-Strecke MCU ↔ FT2232 Kanal B (Messvorschlag in Nachtrag 4, `Erratas.xlsx` anfragen). Die Prüfmodelle `foc_extmode_probe` und `foc_uart_probe` bleiben für einen späteren Test im Repo. Im Flash liegt derzeit `foc_uart_probe` (keine PWM).
+
 ## Nachtrag 4: UART-Grundtest ohne XCP – kein Byte auf COM4, Firmware nachweislich richtig
 
 **Testmodell:** `foc_build_uart_probe` → `matlab/models/test/foc_uart_probe.slx`. Ein uint8-Zähler alle 10 ms geht über SCI_A als Rahmen `'S' <n> 'E'` hinaus, bei 115207 Bd. Kein External Mode, keine PWM, Heartbeat-LED GPIO56.

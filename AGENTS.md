@@ -133,6 +133,9 @@ Sicherheitsrahmen, den der Mensch bestätigt:
 | A5 | **HAL** aus den Komponenten herauslösen (Varianten `CARPEDIEM_F28386D`, `SIM`) | P1, Teil 2 |
 | A6 | **Bus-Objekte** für Mess-, Soll- und Statussignale | Definitionen in `config/`, Octave-kompatibel halten |
 | A7 | **Supervisor in Stateflow** (Init → Offsetkalibrierung → Bereit → Betrieb → Fehler) | ersetzt Freemode-Logik schrittweise |
+| A8 | **UART/External Mode** über FT2232 Kanal B (COM4), zurückgestellt | Firmware korrekt (SCIA auf GPIO42/43 bzw. 84/85), aber kein Byte auf COM4 → Hardwarestrecke messen, `Erratas.xlsx`. Prüfmodelle `models/test/`, Bericht `08_ExtMode_Test_2026-11-03.md` |
+
+Hinweis für Builds aus dem Agenten: In der Agentenumgebung ist `NoDefaultCurrentDirectoryInExePath=1` gesetzt, dann scheitert die Make-Stufe („*.bat nicht gefunden“). Vor dem MATLAB-Aufruf `Remove-Item Env:NoDefaultCurrentDirectoryInExePath`. In der MATLAB-GUI tritt das nicht auf.
 
 ## 7. Repo-Überblick
 
