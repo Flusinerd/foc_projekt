@@ -1,5 +1,5 @@
 // CAN-A-Status der F2838x-CPU1 per CCS-21-Scripting lesen (JTAG/XDS100).
-// Aufruf: C:	is2101sscriptingun.bat host	oolss_read_can_status.js
+// Aufruf: C:/ti/ccs2101/ccs/scripting/run.bat host/tools/ccs_read_can_status.js
 // Ablauf: verbinden (GEL setzt CPU1 in den Boot-ROM), Symbole aus foc_can_probe.out laden, PC = code_start,
 // 4 s laufen lassen, anhalten, CAN-A-Register (CTL/ES/ERRC/BTR) lesen, weiterlaufen lassen. Unter dem Debugger
 // springt der Boot-ROM nicht von selbst in den Flash (Emulation Boot). GEL-Speicherkarte sperrt CAN-A -> memMap aus.
