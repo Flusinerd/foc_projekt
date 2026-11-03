@@ -37,6 +37,9 @@ n0 = (24/sqrt(3)) / (m.FluxPM * m.p) * 60/(2*pi);
 nfail = nfail + check('Leerlaufdrehzahl aus Psi [rpm]', n0, 5600, 400);
 nfail = nfail + check('Rs Strang', m.Rs, 0.0225, 1e-9);
 nfail = nfail + check('PWM-Periode [Ticks]', b.PWM_Counter_Period, 5000, 0);
+% PU-Basis wie im Modell (B4): 2048 Counts * 3,36 V/4095 / 0,03 V/A, SVM-Grenze 24 V/sqrt(3)
+nfail = nfail + check('I_base aus Strommesskette [A]', pu.I_base, 56.01, 0.01);
+nfail = nfail + check('V_base SVM [V]', pu.V_base, 13.856, 0.001);
 nfail = nfail + check('Strom-Tn = L/R', p.Ti_i, m.Lq/m.Rs, 1e-12);
 nfail = nfail + check('Strom-Ki = Kp/Tn', p.Ki_i, p.Kp_i/p.Ti_i, 1e-9);
 % Betragsoptimum in SI zurueckrechnen

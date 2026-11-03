@@ -31,7 +31,7 @@ switch lower(profile)
         timing.Ts_motor    = 0.5/f_pwm;
         timing.Ts_inverter = 0.5/f_pwm;
 
-        pu = foc_pu_system(motor, inv);
+        pu = foc_pu_system(motor, inv, board);
         v.pmsm_ECI6360     = motor;
         v.inverter_DRV8300 = inv;
         v.target_f2838     = board;
