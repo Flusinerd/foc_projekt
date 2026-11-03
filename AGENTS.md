@@ -48,7 +48,7 @@ matlab -batch "cd('matlab'); foc_startup('legacy_f2838'); test_config" -logfile 
 
 ## 5. Ablauf
 
-Stand bei Übergabe: **Schritte 0–4 sind erfolgreich gelaufen** (P0 und P1a). Mit Schritt 0 beginnen, um die Umgebung zu bestätigen. Danach Schritt 5.
+Stand 2026-11-03: **Schritte 0–6 erledigt.** Tags `P1a` (365f7d0), `P1b` (bd15464, Grenzzyklus, siehe Diagnose), `P1b.1` (b451115, gültiger Stand), Schritt 6 in 6f5006d. Berichte unter `matlab/reports/0[0-6]*`. Nächster Schritt: 7.
 
 ### Schritt 0 – Umgebung prüfen (nur lesen)
 ```matlab
@@ -69,7 +69,7 @@ Danach den Stand taggen, falls noch nicht geschehen: `git tag P1a`.
 **Wichtig:** `foc_build_library` überschreibt `focLib.slx` und `app_speed.slx`. Nicht ausführen, nachdem Schritt 5 Korrekturen angewendet hat, es sei denn, das ist ausdrücklich gewollt.
 
 ### Schritt 5 – P1b: Reglerkorrekturen, nur Simulation
-Voraussetzung: `focLib.slx` im Stand P1a. Prüfung: `git diff --stat P1a -- matlab/models/focLib.slx` ist leer. Sonst zurücksetzen mit `git checkout P1a -- matlab/models/focLib.slx`.
+Voraussetzung: `focLib.slx` mit unkorrigierten Reglern (`UseKiTs = on` an allen PID-Blöcken). Seit `ca35d44` enthält der Stand zusätzlich die Polarität im Sensormodell (`foc_fix_sim_sensor`, für `legacy_f2838` bitgleich). Zurücksetzen daher mit `git checkout ca35d44 -- matlab/models/focLib.slx matlab/models/app_speed.slx`, nicht mehr mit P1a.
 
 ```matlab
 T = foc_run_p1b       % Läufe A, B, C; ggf. foc_run_p1b(2) für einen kurzen Probelauf
@@ -82,6 +82,10 @@ Erwartung (bei Abweichung **berichten, nicht nachstellen**):
 | `vd_min` | ≥ 0 (Begrenzung) | < 0 möglich | < 0 möglich |
 | `iq_err_rms` | groß | deutlich kleiner als A | ähnlich B |
 | `speed_err_mean` | ≠ 0 (P-Verhalten) | ≠ 0 | ≈ 0 |
+| Stabilität (Plots) | – | V_d glatt, i_q folgt Sollwert, `id_err_rms` klein | wie B |
+| Vorzeichen | – | Moment folgt i_q,ref (nicht invertiert) | wie B |
+
+Die Tabelle allein reicht nicht: P1b erfüllte sie formal trotz Dauerschwingung (mitgekoppelter Stromkreis, `05_P1b_Diagnose_2026-11-03.md`). Immer die Plots mitbewerten.
 
 Bericht `matlab/reports/05_P1b_<Datum>.md` mit Kennzahlentabelle, Bewertung und den Plots, die `foc_run_p1b` unter `matlab/reports/img/P1b_<Lauf>.png` ablegt (Drehzahl Soll/Ist, i_q Soll/Ist, V_d). Zum interaktiven Ansehen: `Simulink.sdi.load('matlab/reports/P1b_Vergleich.mldatx'); Simulink.sdi.view`. Dann committen, Tag `P1b`.
 
@@ -108,7 +112,7 @@ Prüfen: Build ohne Fehler, Warnungen sammeln. In den Hardware-Einstellungen des
 ### Schritt 8 – Hardware-Erstinbetriebnahme (nur auf Anweisung des Menschen)
 Reihenfolge, damit der Aufbau zuerst mit Bekanntem geprüft wird:
 1. `app_speed` **ohne** Korrekturen (Git-Stand `P1a`) mit `legacy_f2838` flashen. Dieser Stand lief laut MA.
-2. Erst danach P1b. Vorher **muss B4 geklärt sein**: die Verstärkung der Strommessverstärker des DRV8300DIPW-EVM (TI SLVUBV6, Schaltplan SLVC817). Der Mensch liefert das Dokument; Wert in `config/foc_cfg_inverter_drv8300.m` eintragen und die Strom-Skalierung prüfen.
+2. Erst danach P1b.1. B4 ist geklärt (SLVUBV6, SLVC817): 3 mΩ × 9,98 V/V, Offset 1,65 V, Strom in den Motor → ADC unter 1,65 V (`invertingAmp = −1`), 1 PU = 56 A. Im Code kompensiert die Negation in `Scaling DutyCycles` diese Umkehr. Vor dem ersten geregelten Lauf messen: kleiner Gleichstrom in Phase A → `Iab_PU(1)` negativ; GHA/GLA komplementär (DRV8300**DI**: INLx invertiert).
 
 Sicherheitsrahmen, den der Mensch bestätigt:
 - Labornetzteil mit Strombegrenzung
