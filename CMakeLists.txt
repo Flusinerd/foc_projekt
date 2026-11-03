@@ -1,8 +1,9 @@
 cmake_minimum_required(VERSION 3.20)
 project(foc_framework VERSION 0.1.0 LANGUAGES C CXX)
 
-option(FOC_BUILD_GUI   "Build the ImGui host tool (needs OpenGL + GLFW)" ON)
-option(FOC_BUILD_TESTS "Build unit/integration tests" ON)
+option(FOC_BUILD_GUI     "Build FOC Studio (Qt 6 Widgets, set CMAKE_PREFIX_PATH to the Qt kit)" ON)
+option(FOC_BUILD_DEV_GUI "Build the ImGui developer tool focstudio-dev (needs OpenGL + GLFW)" ON)
+option(FOC_BUILD_TESTS   "Build unit/integration tests" ON)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -36,6 +37,9 @@ endif()
 
 # --- GUI -------------------------------------------------------------------------------
 if(FOC_BUILD_GUI)
+    add_subdirectory(host/studio)
+endif()
+if(FOC_BUILD_DEV_GUI)
     add_subdirectory(host/app)
 endif()
 

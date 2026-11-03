@@ -28,7 +28,8 @@ ctest --test-dir build -C Release --output-on-failure
 
 - **Windows (Visual Studio 2022):** genauso. Die Exe liegt unter `build/host/app/Release/focstudio.exe`. Für PCAN muss der PEAK-Treiber installiert sein (liefert `PCANBasic.dll`).
 - **Linux:** `libglfw3-dev` und `libgl1-mesa-dev` installieren oder GLFW automatisch laden lassen. Für CAN entweder SocketCAN (`sudo ip link set can0 up type can bitrate 500000`) oder PEAK PCAN-Basic für Linux verwenden.
-- Ohne GUI (z. B. CI): `-DFOC_BUILD_GUI=OFF`
+- **Qt-Oberfläche (`focstudio`, in Arbeit):** braucht Qt 6 (Windows: MSVC 2022 64-bit). Beim Konfigurieren `-DCMAKE_PREFIX_PATH=C:/Qt/6.12.0/msvc2022_64` angeben; zum Starten muss `C:\Qt\6.12.0\msvc2022_64\bin` im `PATH` liegen. Qwt lädt CMake selbst. Die bisherige ImGui-Oberfläche heißt jetzt `focstudio-dev` (`-DFOC_BUILD_DEV_GUI=OFF` schaltet sie ab).
+- Ohne GUI (z. B. CI): `-DFOC_BUILD_GUI=OFF -DFOC_BUILD_DEV_GUI=OFF`
 
 ## FOC Studio
 

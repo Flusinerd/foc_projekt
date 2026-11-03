@@ -39,8 +39,9 @@ add_library(imgui_bundle STATIC
 target_include_directories(imgui_bundle PUBLIC ${imgui_SOURCE_DIR} ${imgui_SOURCE_DIR}/backends ${implot_SOURCE_DIR})
 target_link_libraries(imgui_bundle PUBLIC glfw OpenGL::GL)
 
-add_executable(focstudio main.cpp App.cpp)
-target_link_libraries(focstudio PRIVATE fochost imgui_bundle)
+# Developer tool (ImGui). The end-user application is host/studio (Qt).
+add_executable(focstudio-dev main.cpp App.cpp)
+target_link_libraries(focstudio-dev PRIVATE fochost imgui_bundle)
 if(MSVC)
     target_compile_definitions(imgui_bundle PUBLIC _CRT_SECURE_NO_WARNINGS)
 endif()
