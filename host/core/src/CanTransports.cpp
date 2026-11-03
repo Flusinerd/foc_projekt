@@ -3,6 +3,8 @@
 #include "fochost/Transport.hpp"
 
 #include <chrono>
+#include <cstdio>
+#include <cstdlib>
 #include <cstring>
 #include <mutex>
 #include <thread>

@@ -5,6 +5,7 @@
 #include <fochost/SimTransport.hpp>
 
 #include <chrono>
+#include <filesystem>
 #include <thread>
 
 using namespace std::chrono_literals;
@@ -71,7 +72,7 @@ int main()
     dev.ackFault();
     CHECK(waitFor([&] { return dev.status().state == FOCP_ST_READY; }, 1000ms));
 
-    CHECK(dev.exportCsv("/tmp/focp_test_scope.csv", err));
+    CHECK(dev.exportCsv((std::filesystem::temp_directory_path() / "focp_test_scope.csv").string(), err));
     dev.disconnect();
     return TEST_RESULT();
 }
