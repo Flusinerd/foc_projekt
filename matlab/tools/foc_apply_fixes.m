@@ -35,7 +35,7 @@ for k = 1:numel(which)
             setPid([base '/PI_Controller_Iq/PID Controller'], 'PI_params.Kp_i',  'PI_params.Ki_i',  '1', '-1');
         case 'speed_pi'
             setPid([lib '/Speed Control/PI_Controller_Speed/PID Controller'], ...
-                'PI_params.Kp_speed', 'PI_params.Ki_speed', '1', 'ctrl_limits.Iq_min');   % A2
+                'PI_params.Kp_speed', 'PI_params.Ki_speed', 'ctrl_limits.Iq_max', 'ctrl_limits.Iq_min');   % A2, Iq_max
         otherwise
             error('foc:fix', 'Unbekannte Korrektur "%s"', which{k});
     end

@@ -52,15 +52,19 @@ end
 
 % Untergrenze des Drehzahlreglers (Iq_ref in PU, A2): legacy bitgleich zum Altmodell (-0,5,
 % "leichtes Bremsen"); datasheet 0 = Ausrollen, weil ein Labornetzteil keine Rueckspeisung aufnimmt.
+% Iq_max: Obergrenze des Drehzahlreglers (Iq_ref in PU). legacy 1 (bitgleich); datasheet 0,1 PU
+% = 5,6 A bei I_base = 56 A, fuer die Erstinbetriebnahme (Motornennstrom 17,6 A, EVM I_max_hw 30 A).
 % reset_I_freemode: I-Anteil des Drehzahlreglers im Freemode auf 0 halten (sonst bleibt mit
 % Iq_min = 0 ein kleiner positiver Rest stehen, SW_ANF_05). legacy 0 = Verhalten wie Altmodell.
 switch lower(profile)
     case 'legacy_f2838'
         v.ctrl_limits.Iq_min = -0.5;
         v.ctrl_limits.reset_I_freemode = 0;
+        v.ctrl_limits.Iq_max = 1;
     otherwise
         v.ctrl_limits.Iq_min = 0;
         v.ctrl_limits.reset_I_freemode = 1;
+        v.ctrl_limits.Iq_max = 0.1;
 end
 
 % Wird im Modell als Variant-Bedingung ~isequal(dataType,'single') genutzt,
