@@ -1,5 +1,13 @@
 # Schritt 8 – Plan für die Hardware-Erstinbetriebnahme (Entwurf, 2026-11-03)
 
+## Ergebnisse
+
+| Stufe | Datum | Ergebnis |
+|---|---|---|
+| **S2 Strompolarität** | 2026-11-04 | **bestanden.** Logik über USB, PVDD aus, Netzteil 1 A: Minus an MOTA, Plus an PGND. ISENA (J1.18 gegen J1.4): 1,660 V ohne Strom → 1,630 V mit 1 A, also **−30 mV/A** (erwartet −29,9 mV/A). Polarität `invertingAmp = −1` bestätigt, CSA-Verstärkung 10 V/V bestätigt (1 PU = 56 A). Offset +10 mV (≈ 2023 Counts) liegt im Kalibrierfenster [1500, 2500]. Gemessen vom Menschen. |
+
+Stand der Firmware für S1/S3 (seit 2026-11-04): `app_speed` mit externem 25-MHz-Oszillator (6fb3c62), DeviceID F28386D (3ace0f0), CAN-Mailboxen getrennt (d338ab0). CAN auf der Hardware mit Testfirmware fehlerfrei, UART nicht nutzbar (A8).
+
 **Status: Vorbereitung. Nichts davon ist ausgeführt.** Jede Stufe mit Hardwarebezug braucht die ausdrückliche Freigabe des Menschen in derselben Sitzung (AGENTS.md, Regel 4). Messungen am Aufbau macht der Mensch. Der Agent bereitet Modelle und Code vor, wertet aus und flasht erst nach Freigabe.
 
 Quellen: AGENTS.md §5 Schritt 8, `05_P1b_Diagnose_2026-11-03.md` (Polarität, ePWM, DRV8300DI), `05b_P1b1_2026-11-03.md`, `docs/Hardware-Ueberblick_Frequenzumrichter.md`, `docs/Firmware-Ueberblick_CarPediem.md`, SLVUBV6.
