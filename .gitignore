@@ -15,3 +15,8 @@ slprj/
 matlab/reports/*.log
 matlab/slcov_output/
 matlab/reports/P1b_Vergleich.mldatx
+# Build-Ausgaben des C2000-Blocksets im Arbeitsordner
+matlab/*.elf
+matlab/*.hex
+matlab/*.out
+matlab/MW_c28xx_pie.h

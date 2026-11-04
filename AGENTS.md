@@ -52,6 +52,8 @@ Stand 2026-11-04: **Schritte 0–7 und A2 erledigt.** Tags `P1a` (365f7d0), `P1b
 
 Testfirmware ohne PWM liegt unter `matlab/models/test/` (Aufbau: `matlab/tools/foc_build_*probe.m`). Den Takt in Testmodellen immer mit `foc_probe_clock` setzen. Nur `UseInternalOsc`/`OSCCLK` zu ändern ergibt 100 MHz. CAN mitlesen: `host/tools/gsusb_can_check.ps1`. CAN-Register über JTAG: `host/tools/ccs_read_can_status.js`. Nach dem Flashen die Platine neu starten (CCS 21 stellt den Takt nicht wieder her).
 
+**Code erzeugen nur mit `foc_codegen`** (bricht ab, wenn die Build action nicht `Build` ist). **Flashen nur mit `foc_flash(model, 'FREIGABE')`** nach Freigabe des Menschen. In `app_speed.slx` ist die Build action seit 2026-11-04 dauerhaft `Build` (`foc_build_action`). Vorher hat ein reines `slbuild` geflasht (`08_S5_Fehler_Flash_2026-11-04.md`).
+
 ### Schritt 0 – Umgebung prüfen (nur lesen)
 ```matlab
 ver
