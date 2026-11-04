@@ -1,7 +1,9 @@
-function foc_flash(model, freigabe)
+function foc_flash(model, freigabe, prep)
 %FOC_FLASH  Anwendungsmodell bauen und ueber JTAG (XDS100) ins Flash laden und starten.
 %
 %   foc_startup(<Profil>); foc_flash('app_speed', 'FREIGABE')
+%   foc_flash('app_speed', 'FREIGABE', @(m) set_param([m '/Heartbeat LED/Constant'], 'Value', '0'))
+%       Testvariante: prep(model) aendert das Modell nur im Speicher und gibt aus, was es tut.
 %
 %   Nur nach ausdruecklicher Freigabe des Menschen in derselben Sitzung (AGENTS.md Regel 4).
 %   Die Build action wird nur im Speicher auf 'Build, load and run' gestellt; das Modell wird
@@ -16,6 +18,10 @@ if isempty(model), model = 'app_speed'; end
 if ~bdIsLoaded(model), load_system(fullfile(root, 'models', [model '.slx'])); end
 if strcmp(get_param(model, 'Dirty'), 'on')
     error('foc:flash', 'Modell %s hat ungespeicherte Aenderungen - Abbruch.', model);
+end
+if nargin >= 3 && ~isempty(prep)
+    fprintf('foc_flash: Testvariante (nur im Speicher): %s\n', func2str(prep));
+    prep(model);
 end
 cs = getActiveConfigSet(model);
 prof = '?';
