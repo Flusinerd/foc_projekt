@@ -1,5 +1,16 @@
 # External Mode – Machbarkeit und erster Test (2026-11-03) – ANGEHALTEN (Linker, Prüfmodell)
 
+## Nachtrag 2026-11-04: UART-Retest mit korrektem Takt – weiterhin kein Byte
+
+Die Tests vom 2026-11-03 liefen mit 100 MHz statt 200 MHz (Fehler in den Testmodellen, siehe `08_CAN_Test_2026-11-03.md`). Wiederholung mit `foc_uart_probe` und Takt wie `app_speed` (externer 25-MHz-Oszillator, `MW_InitSysPll(XTAL_OSC,16,0,0,1,…)`, 200 MHz), jeweils geflasht, **nach Neustart der Platine** (Heartbeat-LED blinkt) auf COM4 gemessen:
+
+| SCI_A-Pins | 115200 Bd | 57600 Bd | 230400 Bd |
+|---|---|---|---|
+| GPIO42 TX / GPIO43 RX | 0 Byte | 0 Byte | 0 Byte |
+| GPIO84 TX / GPIO85 RX | 0 Byte | 0 Byte | 0 Byte |
+
+**Bewertung:** Der Takt war nicht die Ursache. Firmware und Takt sind korrekt; mit demselben Takt läuft CAN fehlerfrei. Die Verbindung MCU (SCIA) ↔ FT2232 Kanal B (COM4) ist auf der Platine unterbrochen oder geht auf andere Pins. **A8 bleibt zurückgestellt**; nächster Schritt ist eine Messung mit dem Oszilloskop (GPIO42/84 und FT2232 Pin 39) bzw. der vollständige Schaltplan oder `Erratas.xlsx`.
+
 ## Entscheidung (2026-11-03): External Mode/UART zurückgestellt
 
 Der Mensch hat entschieden, die serielle Schnittstelle vorerst nicht weiter zu verfolgen. Für Schritt 8 genügen JTAG (Flashen/Starten), Messgeräte (S1–S3) und der CCS-Debugger (S4/S5). Offen bleibt die UART-Strecke MCU ↔ FT2232 Kanal B (Messvorschlag in Nachtrag 4, `Erratas.xlsx` anfragen). Die Prüfmodelle `foc_extmode_probe` und `foc_uart_probe` bleiben für einen späteren Test im Repo. Im Flash liegt derzeit `foc_uart_probe` (keine PWM).

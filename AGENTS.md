@@ -48,7 +48,9 @@ matlab -batch "cd('matlab'); foc_startup('legacy_f2838'); test_config" -logfile 
 
 ## 5. Ablauf
 
-Stand 2026-11-03: **Schritte 0–6 erledigt.** Tags `P1a` (365f7d0), `P1b` (bd15464, Grenzzyklus, siehe Diagnose), `P1b.1` (b451115, gültiger Stand), Schritt 6 in 6f5006d. Berichte unter `matlab/reports/0[0-6]*`. Nächster Schritt: 7.
+Stand 2026-11-04: **Schritte 0–7 und A2 erledigt.** Tags `P1a` (365f7d0), `P1b` (bd15464, Grenzzyklus, siehe Diagnose), `P1b.1` (b451115, gültiger Stand). Schritt 6 in 6f5006d, Schritt 7 in 24d5f90, A2 in 0340c75. `app_speed` nutzt seit 6fb3c62 den **externen 25-MHz-Oszillator** (INTOSC2 zu ungenau für CAN 1 Mbit/s, `08_Takt_ext25_2026-11-03.md`). CAN auf der Hardware getestet (`08_CAN_Test_2026-11-03.md`), UART/External Mode nicht nutzbar (A8). Nächster Schritt: 8 nach `matlab/reports/08_Inbetriebnahme_Plan_2026-11-03.md`.
+
+Testfirmware ohne PWM liegt unter `matlab/models/test/` (Aufbau: `matlab/tools/foc_build_*probe.m`). Den Takt in Testmodellen immer mit `foc_probe_clock` setzen. Nur `UseInternalOsc`/`OSCCLK` zu ändern ergibt 100 MHz. CAN mitlesen: `host/tools/gsusb_can_check.ps1`. CAN-Register über JTAG: `host/tools/ccs_read_can_status.js`. Nach dem Flashen die Platine neu starten (CCS 21 stellt den Takt nicht wieder her).
 
 ### Schritt 0 – Umgebung prüfen (nur lesen)
 ```matlab
@@ -133,7 +135,7 @@ Sicherheitsrahmen, den der Mensch bestätigt:
 | A5 | **HAL** aus den Komponenten herauslösen (Varianten `CARPEDIEM_F28386D`, `SIM`) | P1, Teil 2 |
 | A6 | **Bus-Objekte** für Mess-, Soll- und Statussignale | Definitionen in `config/`, Octave-kompatibel halten |
 | A7 | **Supervisor in Stateflow** (Init → Offsetkalibrierung → Bereit → Betrieb → Fehler) | ersetzt Freemode-Logik schrittweise |
-| A8 | **UART/External Mode** über FT2232 Kanal B (COM4), zurückgestellt | Firmware korrekt (SCIA auf GPIO42/43 bzw. 84/85), aber kein Byte auf COM4 → Hardwarestrecke messen, `Erratas.xlsx`. Prüfmodelle `models/test/`, Bericht `08_ExtMode_Test_2026-11-03.md` |
+| A8 | **UART/External Mode** über FT2232 Kanal B (COM4), zurückgestellt | Firmware und Takt korrekt (am 2026-11-04 mit 200 MHz/ext. Oszillator wiederholt, SCIA auf GPIO42/43 und 84/85), trotzdem kein Byte auf COM4 → Hardwarestrecke messen, `Erratas.xlsx`. Prüfmodelle `models/test/`, Bericht `08_ExtMode_Test_2026-11-03.md` |
 
 Hinweis für Builds aus dem Agenten: In der Agentenumgebung ist `NoDefaultCurrentDirectoryInExePath=1` gesetzt, dann scheitert die Make-Stufe („*.bat nicht gefunden“). Vor dem MATLAB-Aufruf `Remove-Item Env:NoDefaultCurrentDirectoryInExePath`. In der MATLAB-GUI tritt das nicht auf.
 
