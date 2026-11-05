@@ -43,3 +43,7 @@ Neu aufgenommen (`foc_recapture_baseline`, datasheet). Die Abweichung kam nur vo
 | `ctest` (PC-Teil, 5 Tests) | alle bestanden |
 
 Offen: Der Knopf „Verbindung testen“ wird nur im getrennten Zustand angeboten. Die Fehlermeldung des Menschen fehlt noch. Hardwaretest aller Punkte steht aus.
+
+## Hardwaretest
+
+Der erste Flash dieses Stands hing (Strom-ISR in `MW_IPC_Write`, siehe `08_Fehler_Firmware_haengt_2026-11-05.md`). Nach dem Entfernen der IPC-Schreibblöcke (d006b47) meldet der Mensch: **alle Punkte funktionieren** (Verbinden und Freigeben, Scope-Zeitachse, kein Kriechen bei Poti 0).

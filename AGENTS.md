@@ -54,6 +54,8 @@ Testfirmware ohne PWM liegt unter `matlab/models/test/` (Aufbau: `matlab/tools/f
 
 **Code erzeugen nur mit `foc_codegen`** (bricht ab, wenn die Build action nicht `Build` ist). **Flashen nur mit `foc_flash(model, 'FREIGABE')`** nach Freigabe des Menschen. In `app_speed.slx` ist die Build action seit 2026-11-04 dauerhaft `Build` (`foc_build_action`). Vorher hat ein reines `slbuild` geflasht (`08_S5_Fehler_Flash_2026-11-04.md`).
 
+**FOCP (FOC Studio über CAN)** ist seit 2026-11-05 in `app_speed` eingebaut: `firmware/focp_c28x.c` + Protokollbibliothek als Custom Code. Das ist eine bewusste Abweichung von „kein handgeschriebener Firmware-C-Code“, Entscheidung des Menschen (`08_FOCP_Einbau_Plan_2026-11-04.md`). Aufbau: `foc_add_focp`, `foc_focp_telemetry`. Die IPC-Schreibblöcke zum CM-Kern (Ethernet-Logging der MA) sind entfernt (`foc_remove_ipc_cm`): Ohne CM-Programm blockierten sie die Strom-ISR. JTAG-Diagnose ohne Reset: `host/tools/ccs_read_pc_noreset.js` mit `host/tools/ccs/f28388D_nogel.ccxml`. Die Standard-ccxml setzt die CPU beim Verbinden über die GEL-Datei zurück.
+
 ### Schritt 0 – Umgebung prüfen (nur lesen)
 ```matlab
 ver

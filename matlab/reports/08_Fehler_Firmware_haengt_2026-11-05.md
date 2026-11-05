@@ -101,3 +101,14 @@ IPC-Schreibblöcke (CPU1→CM) aus `app_speed`/`focLib` per Skript entfernen ode
 | `foc_codegen` (mit `comm.telem_f`) | erfolgreich, **0 Compilerwarnungen**. Alle 4 bisherigen Warnungen hingen an den IPC-Blöcken, inkl. „missing return in `MW_IPC_Init`“. Kein `MW_IPC_Write` mehr im Code, `CPU1_CM_IPC` nicht mehr definiert. |
 
 Hardware: noch offen.
+
+## Hardwaretest nach der Behebung (2026-11-05)
+
+Geflasht (`08_ipc_flash.log`), Platine neu gestartet. Rückmeldung des Menschen: **„Alles funktioniert“**:
+- Heartbeat-LED blinkt.
+- FOC Studio verbindet.
+- „Freigeben“ ist aktiv.
+- Scope-Abtastrate stimmt.
+- Kein Ruck bei Poti 0.
+
+**Fehler behoben.** Hilfs-Worktree `../foc_ca98e22` entfernt.
