@@ -56,14 +56,19 @@ end
 % = 5,6 A bei I_base = 56 A, fuer die Erstinbetriebnahme (Motornennstrom 17,6 A, EVM I_max_hw 30 A).
 % reset_I_freemode: I-Anteil des Drehzahlreglers im Freemode auf 0 halten (sonst bleibt mit
 % Iq_min = 0 ein kleiner positiver Rest stehen, SW_ANF_05). legacy 0 = Verhalten wie Altmodell.
+% reset_I_cur_freemode: I-Anteile der Stromregler (d/q) im Freemode auf 0 halten. Sonst integrieren
+% sie bei abgeschalteter PWM den Messoffset bis an die Spannungsgrenze; beim Freigeben folgt ein
+% Stromstoss gegen die Sollrichtung (gemessen -31 A, reports/08_FOCP_Einbau_Plan_2026-11-04.md).
 switch lower(profile)
     case 'legacy_f2838'
         v.ctrl_limits.Iq_min = -0.5;
         v.ctrl_limits.reset_I_freemode = 0;
+        v.ctrl_limits.reset_I_cur_freemode = 0;
         v.ctrl_limits.Iq_max = 1;
     otherwise
         v.ctrl_limits.Iq_min = 0;
         v.ctrl_limits.reset_I_freemode = 1;
+        v.ctrl_limits.reset_I_cur_freemode = 1;
         v.ctrl_limits.Iq_max = 0.1;
 end
 
