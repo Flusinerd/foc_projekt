@@ -70,3 +70,20 @@ Eingrenzen per Flashen:
 **Warum die JTAG-Messung nichts zeigte:** `f2838x_cpu1.gel` ruft in `OnTargetConnect()` `GEL_Reset()` auf. Jedes Verbinden setzt CPU1 zurück. Neu: `host/tools/ccs/f28388D_nogel.ccxml` (Kopie ohne GEL-Dateien) und `host/tools/ccs_read_pc_noreset.js`. Geprüft an der laufenden Firmware aus Versuch 3: PC liegt in der Anwendung (0x82BF1, 0x86DCx), IER = 0x409, also kein Reset beim Verbinden.
 
 Nächster Schritt: den hängenden Stand flashen, Platine neu starten, mit `ccs_read_pc_noreset.js` den PC lesen.
+
+## Echter Hängezustand (ohne Reset gelesen, nach Einschalten)
+
+Stand HEAD (4a98dc5 + Bericht) geflasht, Platine neu gestartet, `ccs_read_pc_noreset.js`:
+- PC 0x804F…0x8054 = **`MW_IPC_Write`** (Warteschleife `while(*(H_PU2).mutex.ptr);`), RPC 0x8271B = **`ADCB1_INT`**. IER = 0x409.
+- Die Strom-ISR blockiert also dauerhaft in einem IPC-Schreibblock zum CM-Kern. Alle niedriger priorisierten Tasks (Drehzahl, CAN, Poti, LED) stehen.
+
+`ccs_read_ipc_noreset.js` (IPC-Steuerworte, Kanal k bei Basis + 12·k):
+- CM→CPU1 (0x38000, schreibt nur der CM): alle Worte 0, also auch alle `mutex` = 0.
+- CPU1→CM (0x39000): Kanäle 1–7 initialisiert (`bufLen` = 1, `dtBytes` = 4), **Kanal 0 nicht** (`bufLen` = 0, `dtBytes` = 0).
+- Die Warteschleife liest also offenbar nicht die erwarteten Sperrworte. Wahrscheinlich ist der Handle des betroffenen Schreibblocks nicht (richtig) initialisiert und zeigt auf eine andere Adresse. Deren Inhalt hängt von der Speicheraufteilung ab; das erklärt, warum ein zusätzlicher Parametereintrag den Fehler auslöst. Endgültig bewiesen ist das nicht.
+
+Hintergrund: Die IPC-Schreibblöcke stammen aus der MA (Hall-Daten, Drehzahl usw. an den CM-Kern für Ethernet-Logging über `TCP_Server.slx`, `docs/Firmware-Ueberblick_CarPediem.md`). Auf dem CM läuft in diesem Aufbau kein Programm. Die Ethernet-Patches des Blocksets fehlen. Schon die MA nennt als offenen Punkt „IPC-Daten werden permanent gesendet, auch ohne Ethernet-Verbindung“. Unbenutzte IPC-Schreibblöcke mit Warteschleife in der Strom-ISR sind unabhängig von der genauen Ursache ein Risiko.
+
+## Vorschlag zur Behebung
+
+IPC-Schreibblöcke (CPU1→CM) aus `app_speed`/`focLib` per Skript entfernen oder über eine Variante abschalten. Die Telemetrie übernimmt FOCP über CAN. Danach erneut mit und ohne `comm.telem_f` prüfen.
