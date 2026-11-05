@@ -49,3 +49,14 @@ Nachweise:
 - `foc_codegen` (datasheet): erfolgreich, **kein Laden**. focp.c, focp_dev.c, focp_target.c und focp_c28x.c sind ohne Warnung kompiliert. Aufruf `focp_c28x_step(...)` im 2-kHz-Schritt.
 
 Noch nicht auf der Hardware getestet. CAN-Konfiguration für FOC Studio: CANable, 1 Mbit/s, Knoten 1.
+
+## Hardwaretest (2026-11-05, Freigabe des Menschen)
+
+- `foc_flash` (datasheet). Erster Versuch: Make-Abbruch `focp.d:30: *** missing separator` bei inkrementellem Build, nichts geladen. Das Blockset schreibt die per `#include` eingebundenen `.def`-Tabellen ohne Ziel in die `.d`-Datei. Abhilfe: `tools/foc_clean_custom_deps.m` löscht `focp*.d/.obj` vor jedem Build und wird von `foc_codegen` und `foc_flash` aufgerufen. Zweiter Versuch: geladen, Platine neu gestartet.
+- CANable (`gsusb_can_check.ps1`, 1 Mbit/s): GET_INFO → **INFO 0x261** nach 1 ms (`01 00 01 01 2A 00 16`: Protokoll 1, FW 0.1, Platine 1, 42 Parameter, 22 Signale). **STATUS 0x231** alle 100 ms (`02 02 …`: READY, Drehzahlmodus, keine Fehler). 0x110/0x111 unverändert. Ohne empfangenden Teilnehmer staut sich die TX-Queue (keine Bestätigung). Nach dem Anschluss des Adapters kommen die Rahmen gesammelt; danach wieder alle 100 ms.
+- FOC Studio (`build/host/studio/focstudio.exe`): Qt-DLLs fehlten im Build-Ordner → `windeployqt`. Verbunden, Zustand **„Bereit“**. **Motorsteuerung aus FOC Studio funktioniert** (Rückmeldung des Menschen).
+- Offen:
+  - Der Knopf „Verbindung testen“ funktioniert nicht. Vermutung: Er öffnet den Adapter ein zweites Mal, während die Hauptverbindung besteht.
+  - Udc und Temperatur werden im STATUS als 0 gemeldet.
+  - Telemetrie nur für Drehzahl und Drehzahl-Soll.
+  - Parameter aus FOC Studio wirken nicht auf die Regelung.
