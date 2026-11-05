@@ -5,7 +5,7 @@
  * coder.ceval (code generation only; the simulation keeps the legacy behaviour).
  *
  *  - CAN: own message objects 20..31 next to the blockset's (2, 3 TX; 10, 16 RX).
- *    RX FIFO 20..23 accepts CMD (0x201) and PARAM_REQ (0x211) for node 1, TX round robin 24..31.
+ *    RX FIFO 20..27 accepts CMD (0x201) and PARAM_REQ (0x211) for node 1, TX round robin 28..31.
  *  - Switching (decision 2026-11-04): until the first FOCP frame arrives the drive runs from
  *    the potentiometer as before. Afterwards the speed reference comes from SET_REF, the drive
  *    stays in Freemode until ENABLE, and a heartbeat timeout forces Freemode until ACK_FAULT.
