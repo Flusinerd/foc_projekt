@@ -82,3 +82,22 @@ Nachweise:
 - `foc_equivalence_p1a` (legacy): Abweichung **0**.
 - MIL (datasheet): 3/4; SW_ANF_05 ist weiterhin nur die Baseline aus Iq_max (verify bestanden).
 - `foc_codegen`: erfolgreich, keine neuen Warnungen.
+
+## Hardwaretest Telemetrie (2026-11-05)
+
+Geflasht (`08_FOCP_tel_flash.log`). FOC Studio zeigt Drehzahl, i_q/i_q-Soll und Hall-Zustand.
+
+**Zeitachse um Faktor 10 falsch:** FOC Studio rechnet mit `inv.f_pwm` = 20 kHz / Teiler. Die Firmware tastet aber im Drehzahltakt (2 kHz) ab. Teiler 1 bedeutet also real 2 kHz, angezeigt werden 20 kHz. Abhilfe offen: Abtastung in den 20-kHz-Interrupt verlegen (empfohlen) oder den Takt melden.
+
+Auswertung `focstudio_scope_20261105_120812.csv` (Teiler 1, real 2 kHz, 81 s, Sollwert 1000 rpm, PVDD 24 V, Leerlauf):
+
+| Größe | Ergebnis |
+|---|---|
+| Drehzahl stationär | 1000,0 rpm, σ = 13,9 rpm |
+| i_q / i_q-Soll stationär | 0,827 / 0,828 A, σ(i_q) = 0,25 A (Messrauschen) |
+| Hall-Folge | 1→5→4→6→2→3→1, je 5549 Übergänge, **keine** ungültigen oder übersprungenen Zustände; 2,5 ms je Sektor = 1000 rpm |
+| Anlauf i_q-Soll | springt auf 5,3–5,6 A = Iq_max (0,1 PU) ✔ |
+| **Anlauf i_q** | **−27,8 → −30,7 → −22 → −14 → −8 → −4 → −2 A** über 7 Abtastwerte (3,5 ms), dann positiv. Gleichzeitig Hall 3→2→6→4 (**rückwärts**) und gemessene Drehzahl −238 rpm |
+
+**Befund: Windup der Stromregler im Freemode.** Im Freemode ist die PWM aus. Die Stromregler rechnen aber weiter, und ihr I-Anteil integriert den Messoffset bis an die Spannungsgrenze (±1 PU = 13,9 V; vgl. S3: 90/10-Tastgrad ohne Motor). Beim Freigeben liegt diese Spannung sofort an. Ergebnis: ein Stromstoß von ≈ −31 A gegen die Sollrichtung, bis der I-Anteil nach ≈ 3 ms abgebaut ist. Ohne Last unkritisch, mit Last oder höherer Spannung nicht.
+**Vorschlag:** I-Anteile der Stromregler (d/q) im Freemode zurücksetzen. Das geht wie beim Drehzahlregler (`foc_speed_pi_reset`) und lässt sich per Parameter schalten: legacy aus (bitgleich), datasheet an.
