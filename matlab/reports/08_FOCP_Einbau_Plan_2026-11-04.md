@@ -60,3 +60,25 @@ Noch nicht auf der Hardware getestet. CAN-Konfiguration für FOC Studio: CANable
   - Udc und Temperatur werden im STATUS als 0 gemeldet.
   - Telemetrie nur für Drehzahl und Drehzahl-Soll.
   - Parameter aus FOC Studio wirken nicht auf die Regelung.
+
+## Erweiterung: Udc und Telemetrie (2026-11-05)
+
+`tools/foc_focp_telemetry.m` (Logs `08_FOCP_telemetry*.log`):
+- `focLib/Input Controller`: neuer Ausgang 7 **Udc**. Das ist der Ausgang von Variant Source1, **uint16 in V, also 1 V Auflösung**; dieselbe Größe nutzen Unterspannung und CAN 0x110.
+- `focLib/Torque Controller`: neuer Ausgang 3 **Idq_PU**, aus der Park-Transformation über den neuen Ausgang 2 von `FOC`.
+- `app_speed`:
+  - Rate Transitions auf Ts_speed (Kopien von RT1/RT7)
+  - Data Store Read `GlobalHallState`
+  - FOCP-Eingänge 8–11: udc, idq_ref (aus Speed Control, über einen **Unit Delay**), idq, hall
+  - Konstante `PU_System.I_base`
+- `firmware/focp_c28x.c`: STATUS mit Udc. Telemetrie: speed, speed_ref, udc, id, iq, id_ref, iq_ref (in A), hall_state.
+
+Verlauf:
+1. Erster Lauf brach ab: Die neuen Ausgänge der Bibliothek waren im geladenen `app_speed` noch nicht sichtbar. `focLib` war da schon gespeichert (6→7, 1→2, 2→3 Ausgänge). Das Skript lädt `app_speed` jetzt nach dem Speichern der Bibliothek neu und ist wiederholbar.
+2. Danach meldeten Simulation und Codegenerierung eine **algebraische Schleife** über `app_speed/FOCP/ref_fix` bzw. `Freemode_Or`: FOCP liest den Ausgang von Speed Control und speist dessen Eingänge. Behoben mit einem Unit Delay auf idq_ref (`addRefDelay`).
+
+Nachweise:
+- PC-Test `testC28xGlue` (STATUS mit Udc = 24 V → `60 09`): **bestanden**.
+- `foc_equivalence_p1a` (legacy): Abweichung **0**.
+- MIL (datasheet): 3/4; SW_ANF_05 ist weiterhin nur die Baseline aus Iq_max (verify bestanden).
+- `foc_codegen`: erfolgreich, keine neuen Warnungen.

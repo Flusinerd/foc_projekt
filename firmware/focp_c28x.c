@@ -67,7 +67,8 @@ void focp_c28x_reset(void) { s_init = 0; }
 
 void focp_c28x_step(uint16_t undervoltage, uint16_t freemode_can, uint16_t hot_temp,
                     uint16_t safe_state, uint16_t speed_mode, float speed_pu, float n_base,
-                    uint16_t *active, uint16_t *freemode, float *speed_ref)
+                    float udc, const float *idq_ref_pu, const float *idq_pu, float i_base,
+                    uint16_t hall_state, uint16_t *active, uint16_t *freemode, float *speed_ref)
 {
     float arg, span, ref;
     uint16_t cmd, faults, fm;
@@ -104,7 +105,7 @@ void focp_c28x_step(uint16_t undervoltage, uint16_t freemode_can, uint16_t hot_t
             if (s_comm_fault) faults |= FOCP_FAULT_COMM;
             fm = (uint16_t)(undervoltage || freemode_can || hot_temp || !safe_state || (s_active && !s_enabled));
             focp_target_status(s_comm_fault ? FOCP_ST_FAULT : (fm ? FOCP_ST_READY : FOCP_ST_RUN),
-                               FOCP_MODE_SPEED, FOCP_SENS_HALL, faults, 0.0f, 0.0f);
+                               FOCP_MODE_SPEED, FOCP_SENS_HALL, faults, udc, 0.0f);
         }
     }
 
@@ -117,6 +118,12 @@ void focp_c28x_step(uint16_t undervoltage, uint16_t freemode_can, uint16_t hot_t
     focp_target_set_locked(s_enabled);
     focp_target_set_signal(FOCP_S_SPEED, speed_pu * n_base);
     focp_target_set_signal(FOCP_S_SPEED_REF, ref * span);
+    focp_target_set_signal(FOCP_S_UDC, udc);
+    focp_target_set_signal(FOCP_S_ID_REF, idq_ref_pu[0] * i_base);
+    focp_target_set_signal(FOCP_S_IQ_REF, idq_ref_pu[1] * i_base);
+    focp_target_set_signal(FOCP_S_ID, idq_pu[0] * i_base);
+    focp_target_set_signal(FOCP_S_IQ, idq_pu[1] * i_base);
+    focp_target_set_signal(FOCP_S_HALL_STATE, (float)hall_state);
     focp_target_sample();
     hal_tx();
 
