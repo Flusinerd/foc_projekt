@@ -155,3 +155,5 @@ uint16_t focp_target_cmd_take(float *arg)
 }
 
 float focp_target_reference(void) { return s_ref; }
+
+uint32_t focp_target_rx_count(void) { return s_dev.rx_count; }

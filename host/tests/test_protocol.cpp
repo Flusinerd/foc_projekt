@@ -4,7 +4,9 @@
 #include <focp/focp_frame.h>
 #include <fochost/Transport.hpp>
 #include <focp_target.h>
+#include <focp_c28x.h>
 
+#include <cmath>
 #include <random>
 #include <set>
 #include <vector>
@@ -252,9 +254,47 @@ static void testTargetBinding()
     CHECK(focp_target_tx_pop(&id, d, &len) == 1 && d[0] == FOCP_PS_LOCKED);
 }
 
+static void testC28xGlue()
+{
+    std::puts("app_speed glue (focp_c28x)");
+    uint16_t active = 9, fm = 9; float ref = -1.0f;
+    focp_c28x_reset();
+    // no FOCP traffic: potentiometer mode
+    focp_c28x_step(0, 0, 0, 1, 1, 0.0f, 4000.0f, &active, &fm, &ref);
+    CHECK(active == 0 && fm == 0);
+    // SET_REF 666 rpm (speedMode 1: span floor(4000/3) = 1333 rpm) -> FOCP mode, Freemode until ENABLE
+    focp_msg_t m; uint16_t raw[8];
+    focp_build_cmd_f32(&m, 1, FOCP_CMD_SET_REF, 666.5f);
+    for (int i = 0; i < 8; ++i) raw[i] = m.data[i];
+    focp_target_rx_can(0x201, raw, m.len);
+    focp_c28x_step(0, 0, 0, 1, 1, 0.0f, 4000.0f, &active, &fm, &ref);
+    CHECK(active == 1 && fm == 1 && std::fabs(ref - 0.5f) < 1e-6f);
+    focp_build_cmd(&m, 1, FOCP_CMD_ENABLE); raw[0] = m.data[0];
+    focp_target_rx_can(0x201, raw, 1);
+    focp_c28x_step(0, 0, 0, 1, 1, 0.0f, 4000.0f, &active, &fm, &ref);
+    CHECK(active == 1 && fm == 0);
+    // no heartbeat for > comm.timeout_ms (500 ms = 1000 steps) -> Freemode, ENABLE refused until ACK_FAULT
+    for (int i = 0; i < 1100; ++i) focp_c28x_step(0, 0, 0, 1, 1, 0.0f, 4000.0f, &active, &fm, &ref);
+    CHECK(fm == 1);
+    focp_target_rx_can(0x201, raw, 1);
+    focp_c28x_step(0, 0, 0, 1, 1, 0.0f, 4000.0f, &active, &fm, &ref);
+    CHECK(fm == 1);
+    focp_build_cmd(&m, 1, FOCP_CMD_ACK_FAULT); raw[0] = m.data[0];
+    focp_target_rx_can(0x201, raw, 1);
+    focp_build_cmd(&m, 1, FOCP_CMD_ENABLE); raw[0] = m.data[0];
+    focp_target_rx_can(0x201, raw, 1);
+    focp_c28x_step(0, 0, 0, 1, 1, 0.0f, 4000.0f, &active, &fm, &ref);
+    CHECK(fm == 0);
+    // STATUS frames were queued (0x231)
+    uint32_t id = 0; uint16_t d[8], len = 0; bool status = false;
+    while (focp_target_tx_pop(&id, d, &len)) status = status || id == 0x231;
+    CHECK(status);
+}
+
 int main()
 {
     testTargetBinding();
+    testC28xGlue();
     testTables();
     testBytes();
     testCan();

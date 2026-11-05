@@ -57,6 +57,7 @@ void     focp_target_param_set(uint16_t param_idx, float value);   /* for RO val
 uint16_t focp_target_cmd_pending(void);              /* number of queued commands */
 uint16_t focp_target_cmd_take(float *arg);           /* returns focp_cmd_t, arg = f32 or u8 argument */
 float    focp_target_reference(void);                /* last SET_REF value */
+uint32_t focp_target_rx_count(void);                  /* FOCP messages accepted for this node */
 
 #ifdef __cplusplus
 }

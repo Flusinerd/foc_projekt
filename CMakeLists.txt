@@ -18,7 +18,7 @@ endif()
 add_subdirectory(protocol)
 
 # firmware binding (compiled on the host to keep it in sync; on target it is Custom Code)
-add_library(focp_target STATIC firmware/focp_target.c)
+add_library(focp_target STATIC firmware/focp_target.c firmware/focp_c28x.c)
 target_include_directories(focp_target PUBLIC firmware)
 target_link_libraries(focp_target PUBLIC focp)
 set_target_properties(focp_target PROPERTIES C_STANDARD 99 C_STANDARD_REQUIRED ON)

@@ -33,3 +33,19 @@
 **Hardwarestand:** Auf der Platine läuft die **LED-Testfirmware** (datasheet, Iq_max 0,1, Heartbeat-LED schaltet nicht um). Für den Normalbetrieb `foc_flash('app_speed','FREIGABE')` ohne `prep`.
 
 **Offen außerdem:** Sollwert-Totzone/I-Reset gegen das Kriechen bei Poti 0 (S5-Befund), Baseline SW_ANF_05 neu aufnehmen.
+
+## Umsetzung (2026-11-05)
+
+| Datei | Inhalt |
+|---|---|
+| `firmware/focp_c28x.c/.h` (neu) | Anbindung an eCAN-A. RX-FIFO in den Objekten 20–23 (0x201/0x211, Maske 0x7EF), TX im Wechsel über 24–31. Interrupt-Sperre für die TX-Queue. Umschaltung Poti ↔ FOCP, ENABLE/DISABLE/ACK_FAULT, Heartbeat-Ausfall → Freemode + `FOCP_FAULT_COMM`, STATUS alle 100 ms (READY/RUN/FAULT; Unterspannung, Übertemperatur, SafeState, COMM), Telemetrie `speed`/`speed_ref`. Udc und Temperatur im STATUS vorerst 0. |
+| `firmware/focp_target.c/.h` | Neu: `focp_target_rx_count()` (zählt angenommene FOCP-Nachrichten) |
+| `CMakeLists.txt`, `host/tests/test_protocol.cpp` | `focp_c28x.c` wird für den PC mitgebaut. Minimaler Test `testC28xGlue`: Poti-Modus, Umschaltung, Sollwertskalierung (666,5 rpm → 0,5), ENABLE, Heartbeat-Ausfall → Freemode, ACK_FAULT, STATUS 0x231 → **bestanden** |
+| `matlab/tools/foc_add_focp.m` (neu) | Subsystem `FOCP` auf der Wurzelebene von `app_speed`. Switch auf Speed_Ref (Speed Control In1), OR auf Freemode (In4), MATLAB Function mit `coder.ceval` nur für `coder.target('Rtw')`. Custom Code relativ zu `matlab/models` (`../../protocol/...`). |
+
+Nachweise:
+- `foc_add_focp`: vorher kein FOCP und kein Custom Code, nachher eingebaut (Logs `08_FOCP_add*.log`). Erster Lauf mit Pfaden relativ zu `matlab/` → Build-Fehler „does not exist in … matlab\models“. Korrigiert auf `../../`.
+- `foc_equivalence_p1a` (legacy): 12 Signale, Abweichung **0**. Die Simulation bleibt unverändert.
+- `foc_codegen` (datasheet): erfolgreich, **kein Laden**. focp.c, focp_dev.c, focp_target.c und focp_c28x.c sind ohne Warnung kompiliert. Aufruf `focp_c28x_step(...)` im 2-kHz-Schritt.
+
+Noch nicht auf der Hardware getestet. CAN-Konfiguration für FOC Studio: CANable, 1 Mbit/s, Knoten 1.
