@@ -21,3 +21,20 @@ Ausgabe (Log `08_cur_reset.log`): für d und q jeweils vorher `ExternalReset=non
 | `foc_codegen` (datasheet) | erfolgreich, keine neuen Warnungen; `Reset_I_Cur_Enable = true` an beiden Reglern |
 
 Auf der Hardware noch zu prüfen: Anlauf aus FOC Studio mit Teiler 1. Erwartung: kein negativer Stromstoß, i_q steigt direkt auf ≈ Iq_max, und die Hall-Folge beginnt vorwärts.
+
+## Hardwaretest (2026-11-05)
+
+Geflasht (`08_cur_reset_flash.log`). Aufnahme `focstudio_scope_20261105_122838.csv` (Teiler 1, real 2 kHz, ≈ 54 s, 1000 rpm, 24 V, Leerlauf). Sie enthält Stopp → Ausrollen → erneutes Freigeben aus dem Stillstand.
+
+| Größe | vorher (ohne Reset) | jetzt |
+|---|---|---|
+| i_q im ersten Abtastwert nach dem Freigeben | **−27,8 A**, Minimum −30,7 A, 3,5 ms negativ | **+4,0 A**, danach 4,6–5,3 A = Iq_max ✔ |
+| kleinster i_q der ganzen Aufnahme | −30,7 A | **−0,76 A** |
+| Hall-Folge beim Anlauf | zuerst rückwärts (3→2→6→4) | nicht aufgezeichnet (Hall nicht ausgewählt) |
+| Anlauf 0 → 990 rpm | – | 175 ms |
+
+**Ergebnis: Der Stromstoß beim Freigeben ist behoben.**
+
+Nebenbefund: Einmal in ≈ 54 s springt die gemessene Drehzahl für 2,5 ms auf **1975 rpm** (≈ doppelter Wert). Der Drehzahlregler setzt i_q-Soll dabei für 2,5 ms auf 0. Vermutlich ein Störimpuls auf einer Hall-Leitung: Ein zusätzlicher Interrupt halbiert das gemessene Zeitintervall (bekanntes Problem aus der MA, `docs/Firmware-Ueberblick_CarPediem.md`). Offen, gehört zur Hall-Filterung.
+
+Zuvor: „Freigeben“ war nach dem Flashen gesperrt. Grund: Die Antwort auf `ctrl.mode` war im Parameter-Schub beim Verbinden verloren gegangen (RX-FIFO mit 4 Plätzen lief über). Workaround: neu verbinden. Behoben in ca98e22 (FIFO 8 tief), **noch nicht geflasht**.
