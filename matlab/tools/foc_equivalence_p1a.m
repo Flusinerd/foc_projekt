@@ -18,8 +18,8 @@ pids = {'Speed Control/PI_Controller_Speed/PID Controller', ...
 for k = 1:numel(pids)
     src = ['impmodel/' pids{k}]; dst = ['focLib/' pids{k}];
     if getSimulinkBlockHandle(src) == -1, src = findLegacy(pids{k}); end
-    p = {'P', 'I', 'UseKiTs', 'UpperSaturationLimit', 'LowerSaturationLimit'};
-    if k == 1, p = p(1:3); end
+    p = {'P', 'I', 'UseKiTs', 'PParamDataTypeStr', 'IParamDataTypeStr', 'UpperSaturationLimit', 'LowerSaturationLimit'};
+    if k == 1, p = p(1:5); end
     for j = 1:numel(p), set_param(dst, p{j}, get_param(src, p{j})); end
     fprintf('%s (Speicher): P=%s I=%s UseKiTs=%s [%s %s]\n', dst, get_param(dst, 'P'), ...
         get_param(dst, 'I'), get_param(dst, 'UseKiTs'), get_param(dst, 'LowerSaturationLimit'), ...

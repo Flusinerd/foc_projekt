@@ -29,6 +29,7 @@ if evalin('base', 'exist(''foc_active_profile'', ''var'')'), prof = evalin('base
 codertarget.data.setParameterValue(cs, 'Runtime.BuildAction', 'Build, load and run');
 fprintf('foc_flash: %s, Profil %s, DeviceID=%s, Build, load and run\n', model, prof, ...
         codertarget.data.getParameterValue(cs, 'Runtime.DeviceID'));
+foc_tunable_params();
 foc_clean_custom_deps(model);
 try
     slbuild(model);

@@ -32,6 +32,9 @@ static uint16_t s_cmd[FOCP_TARGET_CMDQ];
 static float s_cmd_arg[FOCP_TARGET_CMDQ];
 static volatile uint16_t s_cmd_head, s_cmd_tail;
 static volatile float s_ref;
+static void (*s_param_cb)(uint16_t idx);
+
+static void on_param_changed(void *ctx, uint16_t idx) { (void)ctx; if (s_param_cb) s_param_cb(idx); }
 
 static int tx_push(void *ctx, const focp_msg_t *m)
 {
@@ -75,7 +78,7 @@ void focp_target_init(uint16_t node)
     cfg.send = tx_push;
     cfg.on_command = on_command;
     cfg.is_locked = is_locked;
-    cfg.on_param_changed = 0;
+    cfg.on_param_changed = on_param_changed;
     s_tx_head = s_tx_tail = 0;
     s_cmd_head = s_cmd_tail = 0;
     s_locked = 0;
@@ -157,3 +160,5 @@ uint16_t focp_target_cmd_take(float *arg)
 float focp_target_reference(void) { return s_ref; }
 
 uint32_t focp_target_rx_count(void) { return s_dev.rx_count; }
+
+void focp_target_set_param_callback(void (*cb)(uint16_t idx)) { s_param_cb = cb; }

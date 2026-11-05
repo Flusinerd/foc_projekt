@@ -20,6 +20,7 @@ if ~strcmp(act, 'Build') || ~strcmp(ext, 'off')
     error('foc:codegen', ['BuildAction muss ''Build'' und ExtMode ''off'' sein ' ...
           '(foc_build_action). Abbruch, es wurde nichts gebaut.']);
 end
+foc_tunable_params();
 foc_clean_custom_deps(model);
 slbuild(model);
 if strcmp(get_param(model, 'Dirty'), 'on')

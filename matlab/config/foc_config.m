@@ -77,6 +77,16 @@ switch lower(profile)
         v.ctrl_limits.Iq_max = 0.1;
 end
 
+% Zur Laufzeit aenderbare Reglerwerte (FOC Studio, FOCP): skalare Kopien, die die PID-Bloecke nutzen.
+% Bei der Codegenerierung werden sie zu ExportedGlobal-Parametern (tools/foc_tunable_params.m);
+% firmware/focp_c28x.c schreibt sie, wenn FOC Studio cur.Kp/Ki, spd.Kp/Ki, spd.Iq_max/Iq_min aendert.
+v.focp_tune_cur_Kp = v.PI_params.Kp_i;
+v.focp_tune_cur_Ki = v.PI_params.Ki_i;
+v.focp_tune_spd_Kp = v.PI_params.Kp_speed;
+v.focp_tune_spd_Ki = v.PI_params.Ki_speed;
+v.focp_tune_iq_max = v.ctrl_limits.Iq_max;
+v.focp_tune_iq_min = v.ctrl_limits.Iq_min;
+
 % Wird im Modell als Variant-Bedingung ~isequal(dataType,'single') genutzt,
 % steht aber nicht in der .mat-Datei.
 if exist('fixdt', 'file') || exist('fixdt', 'builtin')

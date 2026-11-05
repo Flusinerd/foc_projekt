@@ -31,11 +31,11 @@ base = [lib '/Torque Controller/FOC/Current_Controllers'];
 for k = 1:numel(which)
     switch which{k}
         case 'current_pi'
-            setPid([base '/PI_Controller_Id/PID Controller'], 'PI_params.Kp_id', 'PI_params.Ki_id', '1', '-1');
-            setPid([base '/PI_Controller_Iq/PID Controller'], 'PI_params.Kp_i',  'PI_params.Ki_i',  '1', '-1');
+            setPid([base '/PI_Controller_Id/PID Controller'], 'focp_tune_cur_Kp', 'focp_tune_cur_Ki', '1', '-1');   % FOCP
+            setPid([base '/PI_Controller_Iq/PID Controller'], 'focp_tune_cur_Kp', 'focp_tune_cur_Ki', '1', '-1');
         case 'speed_pi'
             setPid([lib '/Speed Control/PI_Controller_Speed/PID Controller'], ...
-                'PI_params.Kp_speed', 'PI_params.Ki_speed', 'ctrl_limits.Iq_max', 'ctrl_limits.Iq_min');   % A2, Iq_max
+                'focp_tune_spd_Kp', 'focp_tune_spd_Ki', 'focp_tune_iq_max', 'focp_tune_iq_min');   % A2, Iq_max, FOCP
         otherwise
             error('foc:fix', 'Unbekannte Korrektur "%s"', which{k});
     end

@@ -259,38 +259,61 @@ static void testC28xGlue()
     std::puts("app_speed glue (focp_c28x)");
     uint16_t active = 9, fm = 9; float ref = -1.0f;
     const float z[2] = {0.0f, 0.0f};
+    focp_tune_cur_Kp = 1.0308f;   // datasheet values in PU (model ExportedGlobal on the target)
+    focp_tune_iq_max = 0.1f;
     focp_c28x_reset();
     // no FOCP traffic: potentiometer mode
-    focp_c28x_step(0, 0, 0, 1, 1, 0.0f, 4000.0f, 24.0f, z, z, 56.0f, 3, &active, &fm, &ref);
+    focp_c28x_step(0, 0, 0, 1, 1, 0.0f, 4000.0f, 24.0f, z, 56.0f, 13.856f, 30.0f, 3, &active, &fm, &ref);
     CHECK(active == 0 && fm == 0);
     // SET_REF 666 rpm (speedMode 1: span floor(4000/3) = 1333 rpm) -> FOCP mode, Freemode until ENABLE
     focp_msg_t m; uint16_t raw[8];
     focp_build_cmd_f32(&m, 1, FOCP_CMD_SET_REF, 666.5f);
     for (int i = 0; i < 8; ++i) raw[i] = m.data[i];
     focp_target_rx_can(0x201, raw, m.len);
-    focp_c28x_step(0, 0, 0, 1, 1, 0.0f, 4000.0f, 24.0f, z, z, 56.0f, 3, &active, &fm, &ref);
+    focp_c28x_step(0, 0, 0, 1, 1, 0.0f, 4000.0f, 24.0f, z, 56.0f, 13.856f, 30.0f, 3, &active, &fm, &ref);
     CHECK(active == 1 && fm == 1 && std::fabs(ref - 0.5f) < 1e-6f);
     focp_build_cmd(&m, 1, FOCP_CMD_ENABLE); raw[0] = m.data[0];
     focp_target_rx_can(0x201, raw, 1);
-    focp_c28x_step(0, 0, 0, 1, 1, 0.0f, 4000.0f, 24.0f, z, z, 56.0f, 3, &active, &fm, &ref);
+    focp_c28x_step(0, 0, 0, 1, 1, 0.0f, 4000.0f, 24.0f, z, 56.0f, 13.856f, 30.0f, 3, &active, &fm, &ref);
     CHECK(active == 1 && fm == 0);
     // no heartbeat for > comm.timeout_ms (500 ms = 1000 steps) -> Freemode, ENABLE refused until ACK_FAULT
-    for (int i = 0; i < 1100; ++i) focp_c28x_step(0, 0, 0, 1, 1, 0.0f, 4000.0f, 24.0f, z, z, 56.0f, 3, &active, &fm, &ref);
+    for (int i = 0; i < 1100; ++i) focp_c28x_step(0, 0, 0, 1, 1, 0.0f, 4000.0f, 24.0f, z, 56.0f, 13.856f, 30.0f, 3, &active, &fm, &ref);
     CHECK(fm == 1);
     focp_target_rx_can(0x201, raw, 1);
-    focp_c28x_step(0, 0, 0, 1, 1, 0.0f, 4000.0f, 24.0f, z, z, 56.0f, 3, &active, &fm, &ref);
+    focp_c28x_step(0, 0, 0, 1, 1, 0.0f, 4000.0f, 24.0f, z, 56.0f, 13.856f, 30.0f, 3, &active, &fm, &ref);
     CHECK(fm == 1);
     focp_build_cmd(&m, 1, FOCP_CMD_ACK_FAULT); raw[0] = m.data[0];
     focp_target_rx_can(0x201, raw, 1);
     focp_build_cmd(&m, 1, FOCP_CMD_ENABLE); raw[0] = m.data[0];
     focp_target_rx_can(0x201, raw, 1);
-    focp_c28x_step(0, 0, 0, 1, 1, 0.0f, 4000.0f, 24.0f, z, z, 56.0f, 3, &active, &fm, &ref);
+    focp_c28x_step(0, 0, 0, 1, 1, 0.0f, 4000.0f, 24.0f, z, 56.0f, 13.856f, 30.0f, 3, &active, &fm, &ref);
     CHECK(fm == 0);
     // STATUS frames were queued (0x231)
     uint32_t id = 0; uint16_t d[8], len = 0; bool status = false;
     while (focp_target_tx_pop(&id, d, &len))
         status = status || (id == 0x231 && d[4] == 0x60 && d[5] == 0x09);   // Udc 24 V = 2400
     CHECK(status);
+
+    // the firmware publishes its gains in SI units: cur.Kp = 1.0308 PU * 13.856 V / 56 A
+    CHECK(std::fabs(focp_target_param(FOCP_P_CUR_KP) - 1.0308f * 13.856f / 56.0f) < 1e-4f);
+    CHECK(std::fabs(focp_target_param(FOCP_P_SPD_IQ_MAX) - 5.6f) < 1e-4f);
+    CHECK(std::fabs(focp_target_param(FOCP_P_COMM_TELEM_F) - 20000.0f) < 1e-3f);
+    // writing spd.Iq_max = 2.8 A from the host sets the tunable to 0.05 PU
+    const uint16_t wr[8] = {FOCP_OP_WRITE, 0x23, 0x03, 0, 0, 0x33, 0x40, 0};   // id 0x0323, 2.8f = 0x40333333
+    uint16_t wr2[8]; for (int i = 0; i < 8; ++i) wr2[i] = wr[i];
+    wr2[3] = 0x33; wr2[4] = 0x33;
+    focp_target_set_locked(0);
+    focp_target_rx_can(0x211, wr2, 7);
+    CHECK(std::fabs(focp_tune_iq_max - 0.05f) < 1e-5f);
+    // LOAD_DEFAULTS restores the compiled value, not the table default
+    focp_build_cmd(&m, 1, FOCP_CMD_LOAD_DEFAULTS); raw[0] = m.data[0];
+    focp_c28x_step(0, 0, 0, 1, 1, 0.0f, 4000.0f, 24.0f, z, 56.0f, 13.856f, 30.0f, 3, &active, &fm, &ref);
+    focp_build_cmd(&m, 1, FOCP_CMD_DISABLE); raw[0] = m.data[0];
+    focp_target_rx_can(0x201, raw, 1);
+    focp_c28x_step(0, 0, 0, 1, 1, 0.0f, 4000.0f, 24.0f, z, 56.0f, 13.856f, 30.0f, 3, &active, &fm, &ref);
+    focp_build_cmd(&m, 1, FOCP_CMD_LOAD_DEFAULTS); raw[0] = m.data[0];
+    focp_target_rx_can(0x201, raw, 1);
+    CHECK(std::fabs(focp_tune_iq_max - 0.1f) < 1e-6f);
 }
 
 int main()

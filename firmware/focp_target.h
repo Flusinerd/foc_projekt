@@ -59,6 +59,9 @@ uint16_t focp_target_cmd_take(float *arg);           /* returns focp_cmd_t, arg 
 float    focp_target_reference(void);                /* last SET_REF value */
 uint32_t focp_target_rx_count(void);                  /* FOCP messages accepted for this node */
 
+/* Called after the host wrote a parameter (idx = FOCP_P_..., 0xFFFF = LOAD_DEFAULTS). */
+void     focp_target_set_param_callback(void (*cb)(uint16_t idx));
+
 #ifdef __cplusplus
 }
 #endif

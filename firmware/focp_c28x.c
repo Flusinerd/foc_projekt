@@ -57,31 +57,88 @@ static void hal_rx(void) {}
 static void hal_tx(void) {}
 #endif
 
-#define STEPS_PER_MS     2u     /* Ts_speed = 0.5 ms */
+#define STEPS_PER_MS     2u       /* Ts_speed = 0.5 ms */
 #define STATUS_PERIOD_MS 100u
+#define TELEM_BASE_HZ    20000.0f /* focp_c28x_isr runs in the current ISR (PWM frequency) */
+#define N_TUNE           6u
 
 static uint16_t s_init, s_active, s_enabled, s_comm_fault, s_div_ms, s_ms_status;
 static uint32_t s_rx_seen;
+static float s_i_base = 1.0f, s_v_base = 1.0f, s_n_base = 1.0f;
+
+/* Tunable controller parameters in PU. On the target they are ExportedGlobal parameters of the
+ * model (matlab/tools/foc_focp_tunable.m); on the host they live here for the tests. */
+#if !defined(__TMS320C28XX__)
+float focp_tune_cur_Kp, focp_tune_cur_Ki, focp_tune_spd_Kp, focp_tune_spd_Ki, focp_tune_iq_max, focp_tune_iq_min;
+#endif
+
+/* Values compiled into the firmware. LOAD_DEFAULTS restores these and not the table defaults,
+ * whose spd.Iq_min = -5 A would brake into a lab supply. */
+static float s_def[N_TUNE];
+static const uint16_t s_tune_param[N_TUNE] = {FOCP_P_CUR_KP, FOCP_P_CUR_KI, FOCP_P_SPD_KP,
+                                              FOCP_P_SPD_KI, FOCP_P_SPD_IQ_MAX, FOCP_P_SPD_IQ_MIN};
+
+static float *tune_var(uint16_t k)
+{
+    switch (k) {
+    case 0: return &focp_tune_cur_Kp;
+    case 1: return &focp_tune_cur_Ki;
+    case 2: return &focp_tune_spd_Kp;
+    case 3: return &focp_tune_spd_Ki;
+    case 4: return &focp_tune_iq_max;
+    default: return &focp_tune_iq_min;
+    }
+}
+
+/* SI value = PU value * factor: current loop V/A, speed loop A/rpm, limits A */
+static float tune_factor(uint16_t k)
+{
+    if (k < 2u) return s_v_base / s_i_base;
+    if (k < 4u) return s_i_base / s_n_base;
+    return s_i_base;
+}
+
+static void publish_tunables(void)
+{
+    uint16_t k;
+    for (k = 0; k < N_TUNE; ++k) focp_target_param_set(s_tune_param[k], *tune_var(k) * tune_factor(k));
+}
+
+static void on_param(uint16_t idx)
+{
+    uint16_t k;
+    if (idx == 0xFFFFu) {                       /* LOAD_DEFAULTS */
+        for (k = 0; k < N_TUNE; ++k) *tune_var(k) = s_def[k];
+        publish_tunables();
+        focp_target_param_set(FOCP_P_COMM_TELEM_F, TELEM_BASE_HZ);
+        return;
+    }
+    for (k = 0; k < N_TUNE; ++k)
+        if (s_tune_param[k] == idx) *tune_var(k) = focp_target_param(idx) / tune_factor(k);
+}
 
 void focp_c28x_reset(void) { s_init = 0; }
 
 void focp_c28x_step(uint16_t undervoltage, uint16_t freemode_can, uint16_t hot_temp,
                     uint16_t safe_state, uint16_t speed_mode, float speed_pu, float n_base,
-                    float udc, const float *idq_ref_pu, const float *idq_pu, float i_base,
-                    uint16_t hall_state, uint16_t *active, uint16_t *freemode, float *speed_ref)
+                    float udc, const float *idq_ref_pu, float i_base, float v_base,
+                    float temp, uint16_t hall_state, uint16_t *active, uint16_t *freemode, float *speed_ref)
 {
     float arg, span, ref;
-    uint16_t cmd, faults, fm;
+    uint16_t cmd, faults, fm, k;
 
+    s_i_base = i_base; s_v_base = v_base; s_n_base = n_base;
     if (!s_init) {
         focp_target_init(FOCP_C28X_NODE);
-        /* telemetry is sampled here (speed task), not in the 20 kHz current ISR */
-        focp_target_param_set(FOCP_P_COMM_TELEM_F, 1000.0f * STEPS_PER_MS);
+        focp_target_param_set(FOCP_P_COMM_TELEM_F, TELEM_BASE_HZ);
+        for (k = 0; k < N_TUNE; ++k) s_def[k] = *tune_var(k);
+        publish_tunables();                     /* FOC Studio shows what the firmware really uses */
+        focp_target_set_param_callback(on_param);
         hal_init();
-        s_init = 1;
         s_active = s_enabled = s_comm_fault = 0;
         s_div_ms = s_ms_status = 0;
         s_rx_seen = 0;
+        s_init = 1;                             /* last: enables focp_c28x_isr */
     }
 
     hal_rx();
@@ -107,7 +164,7 @@ void focp_c28x_step(uint16_t undervoltage, uint16_t freemode_can, uint16_t hot_t
             if (s_comm_fault) faults |= FOCP_FAULT_COMM;
             fm = (uint16_t)(undervoltage || freemode_can || hot_temp || !safe_state || (s_active && !s_enabled));
             focp_target_status(s_comm_fault ? FOCP_ST_FAULT : (fm ? FOCP_ST_READY : FOCP_ST_RUN),
-                               FOCP_MODE_SPEED, FOCP_SENS_HALL, faults, udc, 0.0f);
+                               FOCP_MODE_SPEED, FOCP_SENS_HALL, faults, udc, temp);
         }
     }
 
@@ -117,19 +174,32 @@ void focp_c28x_step(uint16_t undervoltage, uint16_t freemode_can, uint16_t hot_t
     if (ref < 0.0f) ref = 0.0f;
     if (ref > 1.0f) ref = 1.0f;
 
+    /* slow signals; focp_c28x_isr adds the current-loop signals and samples at 20 kHz */
     focp_target_set_locked(s_enabled);
     focp_target_set_signal(FOCP_S_SPEED, speed_pu * n_base);
     focp_target_set_signal(FOCP_S_SPEED_REF, ref * span);
     focp_target_set_signal(FOCP_S_UDC, udc);
+    focp_target_set_signal(FOCP_S_TEMP, temp);
     focp_target_set_signal(FOCP_S_ID_REF, idq_ref_pu[0] * i_base);
     focp_target_set_signal(FOCP_S_IQ_REF, idq_ref_pu[1] * i_base);
-    focp_target_set_signal(FOCP_S_ID, idq_pu[0] * i_base);
-    focp_target_set_signal(FOCP_S_IQ, idq_pu[1] * i_base);
     focp_target_set_signal(FOCP_S_HALL_STATE, (float)hall_state);
-    focp_target_sample();
     hal_tx();
 
     *active = s_active;
     *freemode = (uint16_t)(s_active && !s_enabled);
     *speed_ref = ref;
+}
+
+void focp_c28x_isr(const float *iab_pu, float pos_pu, const float *idq_pu, const float *vdq_pu)
+{
+    if (!s_init) return;                        /* bases and protocol are set up by the speed task */
+    focp_target_set_signal(FOCP_S_IA, iab_pu[0] * s_i_base);
+    focp_target_set_signal(FOCP_S_IB, iab_pu[1] * s_i_base);
+    focp_target_set_signal(FOCP_S_IC, -(iab_pu[0] + iab_pu[1]) * s_i_base);
+    focp_target_set_signal(FOCP_S_ID, idq_pu[0] * s_i_base);
+    focp_target_set_signal(FOCP_S_IQ, idq_pu[1] * s_i_base);
+    focp_target_set_signal(FOCP_S_UD, vdq_pu[0] * s_v_base);
+    focp_target_set_signal(FOCP_S_UQ, vdq_pu[1] * s_v_base);
+    focp_target_set_signal(FOCP_S_THETA_EL, pos_pu * 360.0f);
+    focp_target_sample();
 }
