@@ -5,10 +5,10 @@
 #include "driverlib.h"
 
 #define CAN_BASE      CANA_BASE
-#define OBJ_RX_FIRST  20u
-#define OBJ_RX_LAST   27u   /* 8 deep: a PARAM_REQ burst brings ~4.5 frames per 0.5 ms */
-#define OBJ_TX_FIRST  28u
-#define OBJ_TX_LAST   31u
+#define OBJ_RX_FIRST  17u
+#define OBJ_RX_LAST   31u   /* 15 deep: a PARAM_REQ burst at full bus load brings up to ~7 frames per 0.5 ms */
+#define OBJ_TX_FIRST  4u    /* 4..9 (2, 3, 10, 16 belong to the blockset) */
+#define OBJ_TX_LAST   9u
 
 uint16_t focp_target_irq_save(void) { return __disable_interrupts(); }
 void focp_target_irq_restore(uint16_t s) { __restore_interrupts(s); }
@@ -18,7 +18,7 @@ static uint16_t s_tx_next = OBJ_TX_FIRST;
 static void hal_init(void)
 {
     uint32_t obj;
-    /* FIFO over 20..27: ID 0x2?1 with bit 4 free -> 0x201 (CMD) and 0x211 (PARAM_REQ), node 1 */
+    /* FIFO over 17..31: ID 0x2?1 with bit 4 free -> 0x201 (CMD) and 0x211 (PARAM_REQ), node 1 */
     for (obj = OBJ_RX_FIRST; obj <= OBJ_RX_LAST; ++obj)
         CAN_setupMessageObject(CAN_BASE, obj, 0x201u, CAN_MSG_FRAME_STD, CAN_MSG_OBJ_TYPE_RX, 0x7EFu,
                                CAN_MSG_OBJ_USE_ID_FILTER | (obj < OBJ_RX_LAST ? CAN_MSG_OBJ_FIFO : 0u), 8u);

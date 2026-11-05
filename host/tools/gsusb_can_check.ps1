@@ -20,6 +20,8 @@ param(
     [int]$SendId = -1,
     [string]$SendData = '',          # Hex-Bytes, z. B. "34 12"
     [double]$AfterSendSec = 2,
+    [int]$ParamBurst = 0,            # FOCP: so viele PARAM_REQ READ_INDEX (0x211) direkt hintereinander, Antworten 0x221 zaehlen
+    [int]$BurstGapUs = 0,            # Pause zwischen den Anfragen (der CANable verwirft Rahmen, wenn man ihm zu schnell schreibt)
     [switch]$BusErrors,              # Busfehler-Rahmen melden (GS_CAN_MODE_BERR_REPORTING)
     [string]$InterfaceGuid = '{c15b4308-04d3-11e6-b3ea-6057189e6443}'
 )
@@ -120,6 +122,19 @@ try {
         [GsUsb]::Write($fr)
         "--- gesendet ID=0x{0:X3} [{1}], mitlesen {2} s ---" -f $SendId, (($SendBytes | ForEach-Object { '{0:X2}' -f $_ }) -join ' '), $AfterSendSec
         Listen $AfterSendSec
+    }
+    if ($ParamBurst -gt 0) {
+        for ($i = 0; $i -lt $ParamBurst; $i++) {
+            $fr = New-Object byte[] 20
+            [BitConverter]::GetBytes([uint32]0).CopyTo($fr, 0); [BitConverter]::GetBytes([uint32]0x211).CopyTo($fr, 4)
+            $fr[8] = 3; $fr[12] = 3; $fr[13] = [byte]($i -band 0xFF); $fr[14] = [byte]($i -shr 8)
+            [GsUsb]::Write($fr)
+            if ($BurstGapUs -gt 0) { $t = [Diagnostics.Stopwatch]::StartNew(); while ($t.Elapsed.TotalMilliseconds * 1000 -lt $BurstGapUs) {} }
+        }
+        "--- $ParamBurst Parameteranfragen gesendet, mitlesen $AfterSendSec s ---"
+        $before = [int]$stats[[uint32]0x221]
+        Listen $AfterSendSec | Where-Object { $_ -notmatch "ID=0x23|ID=0x11" }
+        "Antworten 0x221: {0} von {1}" -f ([int]$stats[[uint32]0x221] - $before), $ParamBurst
     }
     "--- Zusammenfassung ---"
     if ($stats.Count -eq 0) { "keine Rahmen empfangen" } else { $stats.GetEnumerator() | Sort-Object Name | ForEach-Object { 'ID 0x{0:X3}: {1} Rahmen' -f $_.Name, $_.Value } }
