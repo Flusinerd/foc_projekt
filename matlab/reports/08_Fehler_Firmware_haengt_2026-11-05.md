@@ -54,3 +54,19 @@ Speicher laut `app_speed.map`: RAMGS_DATA belegt 0x1302 von 0x5000, Stack 0x400.
 Eingrenzen per Flashen:
 1. Aktuelles Modell (inkl. Totzone) mit den **C-Dateien von ca98e22** (FIFO 20–27, TX 28–31, ohne `comm.telem_f`). Läuft das, liegt die Ursache in der C-Änderung.
 2. Sonst ca98e22 komplett. Läuft auch das nicht, liegt die Ursache im Aufbau bzw. im Neustart und nicht in 4a98dc5.
+
+## Eingrenzung (Freigabe des Menschen)
+
+| Versuch | Inhalt | Heartbeat nach Neustart |
+|---|---|---|
+| 1 | Modell 4a98dc5 (Totzone, `comm.telem_f` im Protokoll), C-Dateien von ca98e22 (FIFO 20–27, TX 28–31, ohne Setzen von `comm.telem_f`) | **blinkt nicht** |
+| 2 | ca98e22 komplett (eigener Worktree `../foc_ca98e22`) | **blinkt** |
+
+→ Die C-Änderung (Mailboxen) ist nicht die Ursache. Verbleibend: **Sollwert-Totzone** (focLib) oder **neuer Parameter** in `focp_params.def`.
+| 3 | Stand 4a98dc5 ohne `comm.telem_f` (Zeile in `focp_params.def` und Setzen in `focp_c28x.c` vorübergehend entfernt) | **blinkt** |
+
+→ Auslöser ist **der zusätzliche Eintrag in der Parametertabelle**, nicht die Totzone. Der Protokollcode hat keine Schleife und kein Feld, das von der Parameterzahl abhängt. Der Eintrag verschiebt aber die Speicheraufteilung: `.text` 0x7478 → 0x747D, `.const` 0x1164 → 0x11A6, `.bss` 0x92B → 0x92D. Alle Flash-Abschnitte beginnen 128-bit-ausgerichtet. Vermutung: ein latenter Fehler (Speicher, Zeit, Initialisierung), der durch die Verschiebung sichtbar wird.
+
+**Warum die JTAG-Messung nichts zeigte:** `f2838x_cpu1.gel` ruft in `OnTargetConnect()` `GEL_Reset()` auf. Jedes Verbinden setzt CPU1 zurück. Neu: `host/tools/ccs/f28388D_nogel.ccxml` (Kopie ohne GEL-Dateien) und `host/tools/ccs_read_pc_noreset.js`. Geprüft an der laufenden Firmware aus Versuch 3: PC liegt in der Anwendung (0x82BF1, 0x86DCx), IER = 0x409, also kein Reset beim Verbinden.
+
+Nächster Schritt: den hängenden Stand flashen, Platine neu starten, mit `ccs_read_pc_noreset.js` den PC lesen.
