@@ -26,6 +26,7 @@ extra = setdiff(fieldnames(cfg.vars), [names; {'dataType'; 'ctrl_limits'}]);
 nfail = nfail + check('legacy: ctrl_limits.Iq_min', cfg.vars.ctrl_limits.Iq_min, -0.5, 0);
 nfail = nfail + check('legacy: ctrl_limits.reset_I_freemode', cfg.vars.ctrl_limits.reset_I_freemode, 0, 0);
 nfail = nfail + check('legacy: ctrl_limits.reset_I_cur_freemode', cfg.vars.ctrl_limits.reset_I_cur_freemode, 0, 0);
+nfail = nfail + check('legacy: ctrl_limits.N_ref_min', cfg.vars.ctrl_limits.N_ref_min, 0, 0);
 nfail = nfail + check('legacy: ctrl_limits.Iq_max', cfg.vars.ctrl_limits.Iq_max, 1, 0);
 if ~isempty(extra)
     fprintf('FAIL  legacy: zusaetzliche Variablen %s\n', strjoin(extra', ', ')); nfail = nfail + 1;
@@ -47,6 +48,7 @@ nfail = nfail + check('V_base SVM [V]', pu.V_base, 13.856, 0.001);
 nfail = nfail + check('datasheet: ctrl_limits.Iq_min (Labornetzteil)', c.vars.ctrl_limits.Iq_min, 0, 0);
 nfail = nfail + check('datasheet: ctrl_limits.reset_I_freemode', c.vars.ctrl_limits.reset_I_freemode, 1, 0);
 nfail = nfail + check('datasheet: ctrl_limits.reset_I_cur_freemode', c.vars.ctrl_limits.reset_I_cur_freemode, 1, 0);
+nfail = nfail + check('datasheet: ctrl_limits.N_ref_min [rpm]', c.vars.ctrl_limits.N_ref_min * pu.N_base, 20, 1e-9);
 nfail = nfail + check('datasheet: ctrl_limits.Iq_max (Erstinbetriebnahme)', c.vars.ctrl_limits.Iq_max, 0.1, 0);
 nfail = nfail + check('datasheet: Iq_max * I_base <= I_max_hw [A]', min(c.vars.ctrl_limits.Iq_max * pu.I_base, c.vars.inverter_DRV8300.I_max_hw), c.vars.ctrl_limits.Iq_max * pu.I_base, 0);
 nfail = nfail + check('Strom-Tn = L/R', p.Ti_i, m.Lq/m.Rs, 1e-12);
@@ -71,7 +73,7 @@ need = {'pmsm_ECI6360.p','pmsm_ECI6360.Rs','pmsm_ECI6360.Ld','pmsm_ECI6360.Lq','
     'PI_params.Kp_i','PI_params.Ki_i','PI_params.Kp_id','PI_params.Ki_id','PI_params.Ki_texas', ...
     'PI_params.Ki_d_texas','PI_params.Kp_speed','PI_params.Ki_speed_texas','PI_params.Ki_speed', ...
     'T_pwm','Ts','Ts_inverter','Ts_motor','Ts_simulink','Ts_speed','availableSpeedModes','dataType', ...
-    'ctrl_limits.Iq_min', 'ctrl_limits.Iq_max', 'ctrl_limits.reset_I_freemode', 'ctrl_limits.reset_I_cur_freemode'};
+    'ctrl_limits.Iq_min', 'ctrl_limits.Iq_max', 'ctrl_limits.reset_I_freemode', 'ctrl_limits.reset_I_cur_freemode', 'ctrl_limits.N_ref_min'};
 for prof = {'legacy_f2838', 'datasheet'}
     v = foc_config(prof{1}).vars;
     for k = 1:numel(need)

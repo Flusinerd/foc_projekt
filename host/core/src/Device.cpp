@@ -61,7 +61,7 @@ double ScopeBuffer::tLast() const
 }
 
 // ------------------------------------------------------------------------------------------
-Device::Device() : params_(FOCP_NUM_PARAMS)
+Device::Device() : params_(FOCP_NUM_PARAMS), paramReq_(FOCP_NUM_PARAMS)
 {
     for (int i = 0; i < FOCP_NUM_PARAMS; ++i) params_[i].value = focp_param_table[i].def;
 }
@@ -147,7 +147,7 @@ void Device::loadDefaults()
 void Device::readParam(int idx)
 {
     if (idx < 0 || idx >= FOCP_NUM_PARAMS) return;
-    { std::lock_guard<std::mutex> lk(mx_); params_[idx].pending = true; }
+    { std::lock_guard<std::mutex> lk(mx_); params_[idx].pending = true; paramReq_[idx] = {std::chrono::steady_clock::now(), 0}; }
     focp_msg_t m;
     focp_build_param_req(&m, node_, FOCP_OP_READ, focp_param_table[idx].id, 0.0f);
     send(m);
@@ -161,10 +161,35 @@ void Device::readAllParams()
 void Device::writeParam(int idx, float value)
 {
     if (idx < 0 || idx >= FOCP_NUM_PARAMS) return;
-    { std::lock_guard<std::mutex> lk(mx_); params_[idx].pending = true; }
+    { std::lock_guard<std::mutex> lk(mx_); params_[idx].pending = true; paramReq_[idx] = {std::chrono::steady_clock::now(), 0}; }
     focp_msg_t m;
     focp_build_param_req(&m, node_, FOCP_OP_WRITE, focp_param_table[idx].id, value);
     send(m);
+}
+
+void Device::retryParams()
+{
+    constexpr auto kAnswerTimeout = std::chrono::milliseconds(300);
+    constexpr int kMaxRetries = 4;
+    constexpr size_t kPerRound = 4;   // sent from the receive thread, which also frees the adapter slots
+    const auto now = std::chrono::steady_clock::now();
+    std::vector<int> again;
+    {
+        std::lock_guard<std::mutex> lk(mx_);
+        for (int i = 0; i < FOCP_NUM_PARAMS; ++i) {
+            auto& r = paramReq_[i];
+            if (!params_[i].pending || r.tries >= kMaxRetries || now - r.sent < kAnswerTimeout) continue;
+            if (again.size() >= kPerRound) break;
+            ++r.tries;
+            r.sent = now;
+            again.push_back(i);
+        }
+    }
+    for (int i : again) {   // a lost write is not repeated: reading shows the value the drive really has
+        focp_msg_t m;
+        focp_build_param_req(&m, node_, FOCP_OP_READ, focp_param_table[i].id, 0.0f);
+        send(m);
+    }
 }
 
 std::vector<ParamState> Device::params() const
@@ -256,9 +281,16 @@ void Device::clearScope()
     sampleCounter_ = 0;
 }
 
+double Device::telemetryBaseHz() const
+{
+    std::lock_guard<std::mutex> lk(mx_);
+    const ParamState& t = params_[FOCP_P_COMM_TELEM_F];
+    return (t.valid && t.value > 0.0f) ? t.value : params_[FOCP_P_INV_F_PWM].value;
+}
+
 double Device::scopeSampleTime() const
 {
-    const float f = paramValue(FOCP_P_INV_F_PWM);
+    const double f = telemetryBaseHz();
     return (f > 0 ? scopeDiv_ / f : 1e-3);
 }
 
@@ -299,6 +331,7 @@ void Device::handleTelem(const focp_msg_t& m)
 void Device::rxLoop()
 {
     auto lastHb = std::chrono::steady_clock::now();
+    auto lastRetry = lastHb;
     while (running_) {
         focp_msg_t m;
         if (tr_->receive(m, 20) && (m.node & 0x0F) == node_) {
@@ -311,6 +344,10 @@ void Device::rxLoop()
             focp_build_cmd(&hb, node_, FOCP_CMD_HEARTBEAT);
             send(hb);
             lastHb = now;
+        }
+        if (now - lastRetry > std::chrono::milliseconds(100)) {
+            retryParams();
+            lastRetry = now;
         }
     }
 }

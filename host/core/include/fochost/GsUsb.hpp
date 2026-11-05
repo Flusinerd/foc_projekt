@@ -7,9 +7,11 @@
 // 20-byte bulk frames, little endian); no third-party code.
 #include "fochost/Transport.hpp"
 
+#include <condition_variable>
 #include <cstddef>
 #include <cstdint>
 #include <memory>
+#include <mutex>
 #include <string>
 #include <vector>
 
@@ -108,6 +110,13 @@ private:
     gsusb::BitTiming timing_;
     uint32_t fclk_ = 0;
     uint32_t nextEcho_ = 0;
+    // Frames handed to the adapter whose TX echo has not arrived yet. candleLight drops frames
+    // when the host writes faster than the bus drains them (measured: 42 requests -> 32..36 on the
+    // bus), so send() waits while kMaxInFlight frames are outstanding.
+    static constexpr int kMaxInFlight = 8;
+    std::mutex txMx_;
+    std::condition_variable txCv_;
+    int inFlight_ = 0;
 };
 
 } // namespace fochost

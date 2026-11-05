@@ -75,6 +75,8 @@ void focp_c28x_step(uint16_t undervoltage, uint16_t freemode_can, uint16_t hot_t
 
     if (!s_init) {
         focp_target_init(FOCP_C28X_NODE);
+        /* telemetry is sampled here (speed task), not in the 20 kHz current ISR */
+        focp_target_param_set(FOCP_P_COMM_TELEM_F, 1000.0f * STEPS_PER_MS);
         hal_init();
         s_init = 1;
         s_active = s_enabled = s_comm_fault = 0;

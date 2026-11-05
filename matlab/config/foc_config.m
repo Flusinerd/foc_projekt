@@ -59,16 +59,21 @@ end
 % reset_I_cur_freemode: I-Anteile der Stromregler (d/q) im Freemode auf 0 halten. Sonst integrieren
 % sie bei abgeschalteter PWM den Messoffset bis an die Spannungsgrenze; beim Freigeben folgt ein
 % Stromstoss gegen die Sollrichtung (gemessen -31 A, reports/08_FOCP_Einbau_Plan_2026-11-04.md).
+% N_ref_min: unterhalb dieses Drehzahlsollwerts (PU) wird der I-Anteil des Drehzahlreglers auf 0
+% gehalten. Sonst integriert er bei Poti 0 Rauschen/Offset, bis der Motor alle ~20 s ruckt
+% (S5-Befund). datasheet 0,005 PU = 20 rpm bei N_base 4000; legacy 0 = aus (bitgleich).
 switch lower(profile)
     case 'legacy_f2838'
         v.ctrl_limits.Iq_min = -0.5;
         v.ctrl_limits.reset_I_freemode = 0;
         v.ctrl_limits.reset_I_cur_freemode = 0;
+        v.ctrl_limits.N_ref_min = 0;
         v.ctrl_limits.Iq_max = 1;
     otherwise
         v.ctrl_limits.Iq_min = 0;
         v.ctrl_limits.reset_I_freemode = 1;
         v.ctrl_limits.reset_I_cur_freemode = 1;
+        v.ctrl_limits.N_ref_min = 0.005;
         v.ctrl_limits.Iq_max = 0.1;
 end
 

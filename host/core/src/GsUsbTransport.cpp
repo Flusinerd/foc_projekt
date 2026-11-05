@@ -154,6 +154,8 @@ void GsUsbTransport::close()
 {
     if (!open_) return;
     open_ = false;
+    { std::lock_guard<std::mutex> lk(txMx_); inFlight_ = 0; }
+    txCv_.notify_all();
     uint8_t mode[8] = {};
     io_->controlOut(kMode, 0, mode, 8);   // bus off; ignore errors (adapter may be unplugged)
     io_->close();
@@ -162,6 +164,14 @@ void GsUsbTransport::close()
 bool GsUsbTransport::send(const focp_msg_t& m)
 {
     if (!open_) return false;
+    {
+        // Wait for a free slot. Without ACK on the bus no echo comes back; after the timeout the
+        // frame is sent anyway so a missing echo cannot block the link.
+        std::unique_lock<std::mutex> lk(txMx_);
+        if (!txCv_.wait_for(lk, std::chrono::milliseconds(20), [this] { return inFlight_ < kMaxInFlight; }))
+            inFlight_ = kMaxInFlight - 1;
+        ++inFlight_;
+    }
     HostFrame f;
     uint32_t id = 0;
     msgToCan(m, id, f.data, f.dlc);
@@ -182,6 +192,12 @@ bool GsUsbTransport::receive(focp_msg_t& m, int timeoutMs)
         const int n = io_->bulkRead(buf, sizeof(buf), left.count() > 0 ? int(left.count()) : 0);
         if (n <= 0) return false;
         HostFrame f;
+        if (unpackFrame(buf, size_t(n), f) && f.echoId != kEchoRx) {      // TX echo: slot is free again
+            { std::lock_guard<std::mutex> lk(txMx_); if (inFlight_ > 0) --inFlight_; }
+            txCv_.notify_one();
+            if (left.count() <= 0) return false;
+            continue;
+        }
         if (unpackFrame(buf, size_t(n), f) && f.echoId == kEchoRx &&
             !(f.canId & (kFlagEff | kFlagRtr | kFlagErr)) && canToMsg(f.canId, f.data, f.dlc, m))
             return true;

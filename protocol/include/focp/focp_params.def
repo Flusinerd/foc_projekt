@@ -59,6 +59,7 @@ X(OBS_PLL_BW,       0x0502, "obs.pll_bw",       FOCP_T_F32, "Hz",     1.0f,   50
 
 /* --- Group 0x0C: Communication ------------------------------------------------------------ */
 X(COMM_TIMEOUT,     0x0C00, "comm.timeout_ms",  FOCP_T_U16, "ms",     0,      60000,  500,      0,           "Heartbeat-Timeout im Betrieb (0 = aus)")
+X(COMM_TELEM_F,     0x0C01, "comm.telem_f",     FOCP_T_F32, "Hz",     0.0f,   100000.0f, 0.0f,  FOCP_F_RO,   "Basistakt der Telemetrie (Teiler 1); 0 = inv.f_pwm")
 
 /* --- Group 0x0E: Virtual drive only ------------------------------------------------------- */
 X(SIM_T_LOAD,       0x0E00, "sim.T_load",       FOCP_T_F32, "Nm",     0.0f,   10.0f,  0.0f,     FOCP_F_SIM,  "Simulation: Lastmoment (wirkt gegen die Bewegung)")

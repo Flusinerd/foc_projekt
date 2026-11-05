@@ -112,6 +112,8 @@ public:
     bool scopeRunning() const { return scopeRun_; }
     void clearScope();
     double scopeSampleTime() const;
+    /// Telemetry base rate (divider 1): comm.telem_f if the drive reports it, else inv.f_pwm.
+    double telemetryBaseHz() const;
     uint64_t lostSamples() const { return lost_; }
     template <class F> void withScope(F&& f)
     {
@@ -137,6 +139,7 @@ private:
     void handleTelem(const focp_msg_t& m);
     void send(const focp_msg_t& m);
     void addLog(int level, std::string text, LogKind kind = LogKind::Text, int code = 0, std::string detail = {});
+    void retryParams();
 
     std::unique_ptr<Transport> tr_;
     uint16_t node_ = 1;
@@ -150,6 +153,10 @@ private:
     DriveInfo info_;
     std::deque<LogEntry> log_;
     uint64_t logSeq_ = 0;
+    // CAN frames can get lost (adapter/drive buffers). Unanswered parameter requests are
+    // repeated a few times; see retryParams().
+    struct ParamRequest { std::chrono::steady_clock::time_point sent{}; int tries = 0; };
+    std::vector<ParamRequest> paramReq_;
 
     mutable std::mutex scopeMx_;
     ScopeBuffer scope_;

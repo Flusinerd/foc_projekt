@@ -124,8 +124,8 @@ void ScopePage::applySelection()
 
 void ScopePage::updateRateLabel()
 {
-    const float fpwm = ctl_->params()[FOCP_P_INV_F_PWM].value;
-    rate_->setText(tr("%1 Hz").arg(double(fpwm) / divider_->value(), 0, 'f', 0));
+    const double base = ctl_->device().telemetryBaseHz();
+    rate_->setText(tr("%1 Hz").arg(base / divider_->value(), 0, 'f', 0));
 }
 
 void ScopePage::exportCsv()

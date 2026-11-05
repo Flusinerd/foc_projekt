@@ -418,11 +418,11 @@ void App::panelScope()
         ImGui::EndDisabled();
     }
     ImGui::Separator();
-    const float fpwm = dev_.paramValue(FOCP_P_INV_F_PWM);
+    const double fbase = dev_.telemetryBaseHz();
     ImGui::SetNextItemWidth(80);
     if (ImGui::InputInt("Teiler", &scopeDiv_, 1, 10, ImGuiInputTextFlags_EnterReturnsTrue)) cfgChanged = true;
     scopeDiv_ = std::clamp(scopeDiv_, 1, 10000);
-    ImGui::TextDisabled("= %.0f Hz Abtastung", fpwm / scopeDiv_);
+    ImGui::TextDisabled("= %.0f Hz Abtastung", fbase / scopeDiv_);
     helpMarker("Bei CAN begrenzt die Buslast die Abtastrate: jede Abtastung braucht ceil(n/3) Frames. "
                "Bei 500 kbit/s sind etwa 3000 Frames/s realistisch.");
     if (cfgChanged && conn) applyScopeConfig();
