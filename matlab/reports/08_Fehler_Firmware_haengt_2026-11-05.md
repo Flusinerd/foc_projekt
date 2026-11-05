@@ -87,3 +87,17 @@ Hintergrund: Die IPC-Schreibblöcke stammen aus der MA (Hall-Daten, Drehzahl usw
 ## Vorschlag zur Behebung
 
 IPC-Schreibblöcke (CPU1→CM) aus `app_speed`/`focLib` per Skript entfernen oder über eine Variante abschalten. Die Telemetrie übernimmt FOCP über CAN. Danach erneut mit und ohne `comm.telem_f` prüfen.
+
+## Behebung (Entscheidung des Menschen: entfernen)
+
+`tools/foc_remove_ipc_cm.m` (Log `08_remove_ipc.log`): vorher **8** IPC-Write-Blöcke, nachher **0**. Ersetzt durch Terminatoren:
+- focLib: `Input Controller/Subsystem/TCP_temp`, `Speed Control/TCP_SpeedRef`, `Torque Controller/TCP_Position`, `Torque Controller/TCP_Speed`
+- app_speed: `IPC Write for eCAP INTs/TCP_HallA`, `_HallB`, `_HallC`, `_HallState`
+
+| Prüfung | Ergebnis |
+|---|---|
+| `foc_equivalence_p1a` (legacy) | Abweichung **0** |
+| MIL (datasheet) | **4/4** |
+| `foc_codegen` (mit `comm.telem_f`) | erfolgreich, **0 Compilerwarnungen**. Alle 4 bisherigen Warnungen hingen an den IPC-Blöcken, inkl. „missing return in `MW_IPC_Init`“. Kein `MW_IPC_Write` mehr im Code, `CPU1_CM_IPC` nicht mehr definiert. |
+
+Hardware: noch offen.
