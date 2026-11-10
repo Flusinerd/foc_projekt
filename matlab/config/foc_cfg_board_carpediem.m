@@ -26,5 +26,10 @@ b.comport            = '<Select a port...>';
 
 % Zusatz (vom Modell nicht genutzt)
 b.oscillator_Hz      = 25e6;                % externer Oszillator, in den Hardware Settings pruefen
+
+% Hall-Eingaenge GPIO24..26: Eingangsqualifikation gegen Stoerimpulse (Hardware-Review HW10).
+% Abtastperiode 2*QUALPRD/f_cpu = 100 ns, 6 Samples -> Impulse unter 5*100 ns = 500 ns werden verworfen.
+b.hall_qual_samples  = 6;
+b.hall_qual_prd      = 10;
 b.mcu                = 'TMS320F28386D (PTP, 176-QFP)';
 end
