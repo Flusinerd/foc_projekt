@@ -29,3 +29,14 @@ Bezug: Hardware-Review HW07 (keine Kondensatoren an den ADC-Pins, zu kurzes Abta
 Neu: `tools/foc_eval_scope_csv.m`, wertet FOC-Studio-CSV aus (Drehzahlsprünge, Hall-Folge, Strom-Std und FFT-Linien).
 
 **Hardware:** noch offen (Flash 1). Strom-Rauschen im Stillstand vorher/nachher, PVDD gegen ein Multimeter.
+
+## Vorher-Messung (Firmware adc8175, vor Flash 1)
+
+| Größe | Wert | Quelle |
+|---|---|---|
+| PVDD FOC Studio / Multimeter | **24,4 V / 23,95 V** (+1,9 %) | Mensch |
+| Strom-Std im Stillstand ia / ib / ic | **0,127 / 0,139 / 0,212 A** (ic = −(ia+ib), daher größer) | `Strommessung.csv`, `foc_eval_scope_csv` |
+| Mittelwert (Offsetrest) ia / ib | −0,100 / −0,086 A | dto. |
+| Hall-Lauf 1000 rpm | 100 s (Pufferende), 37 543 Wechsel, **0 Sprünge, 0 unzulässige Übergänge**, ab t = 182 s Stillstand | `Hall.csv` |
+
+Einschränkung: `Strommessung.csv` hat 16 110 Lücken (4 Signale × Teiler 6 ≈ 6700 CAN-Rahmen/s, Bus überlastet). Die Std ist verwertbar, die FFT nicht. Für die Nachher-Messung dieselben Einstellungen wählen und zusätzlich eine Aufnahme mit nur `ia` (Teiler 10, 1 Rahmen/Abtastung) machen, für eine lückenlose FFT.
