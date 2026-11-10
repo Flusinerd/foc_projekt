@@ -31,5 +31,11 @@ b.oscillator_Hz      = 25e6;                % externer Oszillator, in den Hardwa
 % Abtastperiode 2*QUALPRD/f_cpu = 100 ns, 6 Samples -> Impulse unter 5*100 ns = 500 ns werden verworfen.
 b.hall_qual_samples  = 6;
 b.hall_qual_prd      = 10;
+
+% ADC-Abtastfenster (Hardware-Review HW07). Bisher 35..75 ns, teils unter dem Datenblatt-Minimum
+% (75 ns bei 12 bit). Stroeme inkl. Offsetkalibrierung gleich, langsame Kanaele laenger
+% (PVDD-Teiler ca. 2,9 kOhm Quellwiderstand).
+b.adc_acq_cur_ns     = 300;
+b.adc_acq_slow_ns    = 1000;
 b.mcu                = 'TMS320F28386D (PTP, 176-QFP)';
 end

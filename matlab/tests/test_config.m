@@ -44,6 +44,8 @@ nfail = nfail + check('Leerlaufdrehzahl aus Psi [rpm]', n0, 5600, 400);
 nfail = nfail + check('Rs Strang', m.Rs, 0.0225, 1e-9);
 nfail = nfail + check('PWM-Periode [Ticks]', b.PWM_Counter_Period, 5000, 0);
 nfail = nfail + check('Hall-Qualifikation: Fensterbreite [ns]', (b.hall_qual_samples - 1) * 2 * b.hall_qual_prd / b.CPU_frequency * 1e9, 500, 1e-6);
+nfail = nfail + check('ADC-Fenster Strom >= 75 ns', b.adc_acq_cur_ns >= 75, 1, 0);
+nfail = nfail + check('ADC-Fenster Strom [SYSCLK]', b.adc_acq_cur_ns * b.CPU_frequency / 1e9, 60, 1e-9);
 % PU-Basis wie im Modell (B4): 2048 Counts * 3,36 V/4095 / 0,03 V/A, SVM-Grenze 24 V/sqrt(3)
 nfail = nfail + check('I_base aus Strommesskette [A]', pu.I_base, 56.01, 0.01);
 nfail = nfail + check('V_base SVM [V]', pu.V_base, 13.856, 0.001);
