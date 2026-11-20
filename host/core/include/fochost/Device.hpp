@@ -32,8 +32,7 @@ struct DriveInfo {
 
 /// What a log entry is about, so a GUI can phrase (and translate) it itself.
 enum class LogKind {
-    Text,              ///< free text only
-    Connected,         ///< code = node, detail = transport name
+    Connected,        ///< code = node, detail = transport name
     Disconnected,
     CalibStarted,      ///< code = focp_calib_t
     CalibDone,         ///< code = focp_calib_t (0 if unknown)
@@ -48,16 +47,14 @@ enum class LogKind {
 };
 
 struct LogEntry {
-    double t;          ///< seconds since connect
-    int level;         ///< 0 info, 1 warning, 2 error
-    std::string text;  ///< German text (developer tool)
-    LogKind kind = LogKind::Text;
+    int level = 0;     ///< 0 info, 1 warning, 2 error
+    LogKind kind = LogKind::Connected;
     int code = 0;
     std::string detail;
     uint64_t seq = 0;  ///< increases with every entry, survives the 2000-entry limit
 };
 
-/// Ring buffer for streamed telemetry. Layout fits ImPlot's (data, count, offset) API.
+/// Ring buffer for streamed telemetry.
 struct ScopeBuffer {
     size_t capacity = 0;
     size_t count = 0;
@@ -104,12 +101,10 @@ public:
     void readAllParams();
     void writeParam(int idx, float value);
     std::vector<ParamState> params() const;
-    float paramValue(int idx) const;
 
     // telemetry
     void configureScope(const std::vector<int>& signalIdx, uint16_t divider, size_t capacity = 200000);
     void runScope(bool run);
-    bool scopeRunning() const { return scopeRun_; }
     void clearScope();
     double scopeSampleTime() const;
     /// Telemetry base rate (divider 1): comm.telem_f if the drive reports it, else inv.f_pwm.
@@ -127,8 +122,6 @@ public:
     std::vector<LogEntry> log() const;
     /// Only entries with LogEntry::seq > seq (cheap polling).
     std::vector<LogEntry> logSince(uint64_t seq) const;
-    void clearLog();
-    double connectedTime() const;
     uint64_t rxMessages() const { return rxCount_; }
 
     std::atomic<bool> heartbeat{true};
@@ -138,14 +131,13 @@ private:
     void handle(const focp_msg_t& m);
     void handleTelem(const focp_msg_t& m);
     void send(const focp_msg_t& m);
-    void addLog(int level, std::string text, LogKind kind = LogKind::Text, int code = 0, std::string detail = {});
+    void addLog(int level, LogKind kind, int code = 0, std::string detail = {});
     void retryParams();
 
     std::unique_ptr<Transport> tr_;
     uint16_t node_ = 1;
     std::atomic<bool> running_{false};
     std::thread rx_;
-    std::chrono::steady_clock::time_point t0_{};
 
     mutable std::mutex mx_;                 // params, status, info, log
     std::vector<ParamState> params_;

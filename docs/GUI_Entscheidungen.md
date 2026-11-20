@@ -1,6 +1,6 @@
 # FOC Studio – Entscheidungen zur Qt-Oberfläche
 
-Umstellung von FOC Studio vom Entwicklerwerkzeug (Dear ImGui) auf ein Endanwender-Programm mit Qt 6 Widgets. Die ImGui-Oberfläche bleibt als `focstudio-dev` baubar (CMake-Option `FOC_BUILD_DEV_GUI`). Der Kern `host/core` (Bibliothek `fochost`) bleibt Qt-frei.
+Umstellung von FOC Studio vom Entwicklerwerkzeug (Dear ImGui) auf ein Endanwender-Programm mit Qt 6 Widgets. Die ImGui-Oberfläche (`focstudio-dev`, `host/app`) wurde am 2026-11-20 als Altlast entfernt; sie steht noch im Git-Verlauf. Der Kern `host/core` (Bibliothek `fochost`) bleibt Qt-frei.
 
 ## 1. Vorgaben aus der Befragung (2026-11-03)
 
@@ -25,7 +25,7 @@ Umstellung von FOC Studio vom Entwicklerwerkzeug (Dear ImGui) auf ein Endanwende
 
 ### Benchmark
 
-Programm: `host/bench/plotbench/` (eigenständiges CMake-Projekt, beide Bibliotheken per FetchContent auf festen Tags). Last: 8 Signale, je 20 000 Punkte im Fenster (f_s = 10 kHz, 2 s), Timer 30 Bilder/s, je Bild ca. 333 neue Punkte pro Signal. Jedes Bild wird im Timer-Slot synchron gezeichnet, die Bildzeit umfasst Datenaktualisierung, Replot und Paint. Fenster 1600 × 900, Messung 10 s nach 15 Bildern Vorlauf. Optionen: `--plots 1|8` (Signale auf 1 oder 8 Plots verteilt), `--aa` (Antialiasing der Kurven), `--fast` (Qwt: `FilterPointsAggressive`; JKQtPlotter: ohne Gitter, die Version 4.0 hat keine Punktreduktion).
+Programm: `host/bench/plotbench/` (am 2026-11-20 entfernt, im Git-Verlauf ab Commit 301f22c; eigenständiges CMake-Projekt, beide Bibliotheken per FetchContent auf festen Tags). Last: 8 Signale, je 20 000 Punkte im Fenster (f_s = 10 kHz, 2 s), Timer 30 Bilder/s, je Bild ca. 333 neue Punkte pro Signal. Jedes Bild wird im Timer-Slot synchron gezeichnet, die Bildzeit umfasst Datenaktualisierung, Replot und Paint. Fenster 1600 × 900, Messung 10 s nach 15 Bildern Vorlauf. Optionen: `--plots 1|8` (Signale auf 1 oder 8 Plots verteilt), `--aa` (Antialiasing der Kurven), `--fast` (Qwt: `FilterPointsAggressive`; JKQtPlotter: ohne Gitter, die Version 4.0 hat keine Punktreduktion).
 
 Rechner: Intel Core i7-10700, Intel UHD 630, Qt 6.12.0 MSVC 2022 64-bit, Release, 2026-11-03.
 

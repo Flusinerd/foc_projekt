@@ -24,17 +24,3 @@ Im Installer liegen unter `licenses/`: diese Datei, `Qt-LICENSE.txt` (Lizenztext
 
 Keine Fremdbibliotheken. Der gs_usb-Transport ist eine eigene Umsetzung (siehe `docs/GUI_Entscheidungen.md` §4); candle_api (LGPL 3) wurde geprüft, aber nicht verwendet.
 
-## Entwicklerwerkzeug (`focstudio-dev`, ImGui)
-
-| Komponente | Version | Lizenz |
-|---|---|---|
-| Dear ImGui | v1.92.7-docking | MIT |
-| ImPlot | v1.1 | MIT |
-| GLFW | 3.4 | zlib |
-
-## Nur Benchmark (`host/bench/plotbench`, nicht ausgeliefert)
-
-| Komponente | Version | Lizenz |
-|---|---|---|
-| JKQtPlotter | 4.0.3 | LGPL 2.1 |
-| Qwt | 6.3.0 | siehe oben |

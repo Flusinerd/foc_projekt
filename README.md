@@ -12,9 +12,7 @@ Dieser Stand enthält den **Kommunikationskern** und das **Host-Tool**:
 | `firmware/` | `focp_target.c/.h` – Anbindung für das Simulink-Modell (C-Caller-Blöcke / Custom Code, C28x) |
 | `host/core/` | C++17-Bibliothek `fochost` (Qt-frei): Transporte (Simulation, CANable/candleLight über WinUSB, SocketCAN, PCAN), `Device` (Parameter-Cache, Telemetrie, Ereignisse), `VirtualDrive` |
 | `host/studio/` | **FOC Studio** – Endanwender-Programm (Qt 6 Widgets, Qwt), Deutsch/Englisch, Windows-Installer |
-| `host/app/` | **focstudio-dev** – Entwicklerwerkzeug (Dear ImGui + ImPlot, GLFW, OpenGL 3) |
 | `host/tests/` | Protokoll-, Regelkreis-, Transport- und Integrationstests |
-| `host/bench/` | Plot-Benchmark Qwt/JKQtPlotter (eigenständiges CMake-Projekt) |
 | `matlab/` | **Modellbasierte Firmware**: Parameter-Skripte (statt `.mat`), Reglerauslegung, Build-Skripte für Simulink-Bibliothek und Anwendungsmodell, Tests. Anleitung: `docs/P0_P1_Anleitung.md` |
 | `docs/` | Konzept/Roadmap, Analyse der Vorgänger-Firmware und -Hardware, Anleitung P0/P1, [Installation](docs/Installation.md), [GUI-Entscheidungen](docs/GUI_Entscheidungen.md), [Lizenzen](docs/LICENSES.md) |
 
@@ -22,7 +20,7 @@ Dieser Stand enthält den **Kommunikationskern** und das **Host-Tool**:
 
 ## Bauen
 
-Voraussetzungen: CMake ≥ 3.20, ein C++17-Compiler, Git und für die Oberfläche **Qt 6 (≥ 6.7)**, unter Windows die Variante *MSVC 2022 64-bit*. Qwt, ImGui, ImPlot und (falls nicht installiert) GLFW lädt CMake beim ersten Konfigurieren selbst herunter. Einzelheiten, Installer und Übersetzungen: [docs/Installation.md](docs/Installation.md).
+Voraussetzungen: CMake ≥ 3.20, ein C++17-Compiler, Git und für die Oberfläche **Qt 6 (≥ 6.7)**, unter Windows die Variante *MSVC 2022 64-bit*. Qwt lädt CMake beim ersten Konfigurieren selbst herunter. Einzelheiten, Installer und Übersetzungen: [docs/Installation.md](docs/Installation.md).
 
 ```bash
 cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH=C:/Qt/6.12.0/msvc2022_64
@@ -32,15 +30,14 @@ cd build && cpack                    # Windows: FOCStudio-<Version>-win64.exe (N
 ```
 
 - **Windows:** in einer „Developer PowerShell for VS 2022“. Zum Starten aus dem Build-Ordner muss `C:\Qt\6.12.0\msvc2022_64\bin` im `PATH` liegen. Für PCAN muss der PEAK-Treiber installiert sein (liefert `PCANBasic.dll`); der CANable mit candleLight-Firmware braucht keinen Treiber.
-- **Linux:** Qt 6 sowie `libglfw3-dev` und `libgl1-mesa-dev` (für `focstudio-dev`) installieren. CAN über SocketCAN (`sudo ip link set can0 up type can bitrate 500000`; der CANable erscheint über den Kernel-Treiber `gs_usb` als `can0`) oder PEAK PCAN-Basic für Linux. Der Linux-Build der Qt-Oberfläche ist noch nicht geprüft.
-- **Optionen:** `FOC_BUILD_GUI` (FOC Studio, Qt), `FOC_BUILD_DEV_GUI` (focstudio-dev, ImGui), `FOC_BUILD_TESTS`. Ohne Oberflächen (z. B. CI): `-DFOC_BUILD_GUI=OFF -DFOC_BUILD_DEV_GUI=OFF`.
+- **Linux:** Qt 6 installieren. CAN über SocketCAN (`sudo ip link set can0 up type can bitrate 500000`; der CANable erscheint über den Kernel-Treiber `gs_usb` als `can0`) oder PEAK PCAN-Basic für Linux. Der Linux-Build der Qt-Oberfläche ist noch nicht geprüft.
+- **Optionen:** `FOC_BUILD_GUI` (FOC Studio, Qt), `FOC_BUILD_TESTS`. Ohne Oberfläche (z. B. CI): `-DFOC_BUILD_GUI=OFF`.
 
 ## FOC Studio
 
 ```bash
 build/host/studio/focstudio              # normal
 build/host/studio/focstudio --demo       # virtueller Antrieb + Demo-Ablauf (endet mit einem Überspannungsfehler zum Quittieren)
-build/host/app/focstudio-dev             # Entwicklerwerkzeug (ImGui), gleiche Funktionen ohne Normal-/Expertenmodus
 ```
 
 - **Verbindung:** virtueller Antrieb, CANable/candleLight (USB, Adaptersuche), SocketCAN oder PCAN-USB; Bitrate 125k–1M, Knoten 0–15, „Verbindung testen“ (wartet auf INFO). Das Tool sendet einen Heartbeat. Bleibt er im Betrieb länger als `comm.timeout_ms` aus, schaltet der Antrieb mit Fehler COMM ab.
@@ -108,7 +105,6 @@ Die folgenden Punkte gelten auch für die echte Hardware und müssen in der Firm
 | Virtueller Antrieb: Hall, sensorlos, hybrid, Lage, Schutzfunktionen, Hall-Kalibrierung | getestet |
 | FOC Studio (Qt) mit Simulation, Windows | läuft; Installer (NSIS/ZIP) erzeugt, Paket ohne Qt im PATH lauffähig |
 | FOC Studio (Qt), Linux-Build | nicht geprüft |
-| focstudio-dev (ImGui) mit Simulation | läuft |
 | CANable/candleLight (gs_usb, WinUSB) | implementiert, mit simuliertem Adapter getestet; Adaptersuche am Labor-PC geprüft, Betrieb am Antrieb offen |
 | SocketCAN | implementiert, ohne Hardware nicht getestet |
 | PCAN-Basic | implementiert, ohne Hardware nicht getestet |

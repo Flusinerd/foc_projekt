@@ -158,8 +158,8 @@ protocol/ firmware/  Firmware-C-Code (Protokoll FOCP, Target-Anbindung) – nich
 host/              PC-Teil (kein Firmware-Code), ändern nur auf Anweisung des Menschen
   core/            fochost: Transporte (Sim, CANable/gs_usb, SocketCAN, PCAN), Device – Qt-frei halten
   studio/          FOC Studio (Qt 6 Widgets, Qwt), Übersetzungen in translations/
-  app/             focstudio-dev (ImGui), Entwicklerwerkzeug
-  tests/           ctest-Tests;  bench/  Plot-Benchmark (eigenständig)
+  tests/           ctest-Tests
+  tools/           CCS-/CAN-Diagnoseskripte, svgicon (Programmsymbol)
 cmake/             Qwt.cmake (FetchContent), Packaging.cmake (CPack/NSIS)
 ```
 

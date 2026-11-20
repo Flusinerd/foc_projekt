@@ -77,10 +77,8 @@ QString EventLog::describe(const LogEntry& e)
             .arg(e.code, 4, 16, QLatin1Char('0'));
     case LogKind::VersionMismatch:
         return tr("Protocol or table version of drive and program differ. Update firmware or FOC Studio.");
-    case LogKind::Text:
-    default:
-        return QString::fromStdString(e.text);
     }
+    return QString();
 }
 
 void EventLog::poll()

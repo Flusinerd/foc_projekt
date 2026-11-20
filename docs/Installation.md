@@ -33,7 +33,7 @@ Voraussetzungen (Windows):
 | Visual Studio 2022 Build Tools | 17.x | Workload „Desktopentwicklung mit C++“ (MSVC, Windows SDK, CMake, Ninja) |
 | Qt | 6.12 (≥ 6.7), **MSVC 2022 64-bit** | Qt Online Installer. Die MinGW-Variante passt nicht zu MSVC. |
 | NSIS | 3.x | nur für den Installer (`winget install NSIS.NSIS`) |
-| Git | | FetchContent lädt Qwt, ImGui, ImPlot, GLFW |
+| Git | | FetchContent lädt Qwt |
 
 In einer „Developer PowerShell for VS 2022“ (oder nach `vcvars64.bat`):
 
@@ -49,7 +49,7 @@ Starten aus dem Build-Ordner: `C:\Qt\6.12.0\msvc2022_64\bin` muss im `PATH` lieg
 build\host\studio\focstudio.exe --demo
 ```
 
-CMake-Optionen: `FOC_BUILD_GUI` (Qt-Anwendung `focstudio`, Standard EIN), `FOC_BUILD_DEV_GUI` (ImGui-Entwicklerwerkzeug `focstudio-dev`, Standard EIN), `FOC_BUILD_TESTS`. Ohne Oberflächen, z. B. für CI: `-DFOC_BUILD_GUI=OFF -DFOC_BUILD_DEV_GUI=OFF`.
+CMake-Optionen: `FOC_BUILD_GUI` (Qt-Anwendung `focstudio`, Standard EIN), `FOC_BUILD_TESTS`. Ohne Oberfläche, z. B. für CI: `-DFOC_BUILD_GUI=OFF`.
 
 **Linux:** Qt 6 (≥ 6.7) aus den Paketquellen oder dem Qt-Installer, sonst wie oben. Der CANable erscheint dort über den Kernel-Treiber `gs_usb` als SocketCAN-Schnittstelle (`sudo ip link set can0 up type can bitrate 500000`), in FOC Studio „SocketCAN“ wählen. *Stand 2026-11-03: Der Linux-Build der Qt-Oberfläche ist noch nicht geprüft (kein Linux-System verfügbar).*
 

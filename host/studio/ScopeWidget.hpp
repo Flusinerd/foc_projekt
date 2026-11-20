@@ -19,9 +19,7 @@ public:
     /// Signals to show (focp_signal_idx_t); empty = everything that is streamed.
     void setWanted(std::vector<int> signalIdx);
     void setWindow(double seconds) { window_ = seconds; }
-    double window() const { return window_; }
     void setPaused(bool p) { paused_ = p; }
-    bool paused() const { return paused_; }
 
 private:
     void refresh();

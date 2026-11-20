@@ -57,7 +57,7 @@ Ersetzt `params_f2838.mat` und `mcb.internal.SetControllerParameters` (internes,
 
 ## 4. Host-GUI („FOC Studio“) – umgesetzt in v0.1
 
-- **Nativ in C++17**: Dear ImGui (Docking) + ImPlot, GLFW/OpenGL 3, CMake. Unter Windows und Linux ergibt das eine einzelne ausführbare Datei.
+- **Nativ in C++17**: Qt 6 Widgets + Qwt, CMake, Windows-Installer (NSIS). Die erste Fassung mit Dear ImGui wurde ersetzt (`docs/GUI_Entscheidungen.md`).
 - **Protokoll FOCP** (`protocol/`, C99, auf C28x lauffähig): Jede Nachricht hat höchstens 8 Byte und passt in einen CAN-Frame; für Streams kommt COBS + CRC-16 dazu. Parameter- und Signaltabellen sind X-Macros und gelten gleichzeitig für Firmware und Tool. Funktionen: Parameter lesen/schreiben (mit Bereichsprüfung und Sperre während des Betriebs), Kommandos, Telemetrie (8 Slots, Teiler), Status (10 Hz), Ereignisse, Heartbeat-Überwachung.
 - **Transporte**: virtueller Antrieb (gleicher C-Code wie auf dem Target + PMSM-Modell), SocketCAN, PCAN-Basic (wird zur Laufzeit geladen). **Als Nächstes UART**: Die Platine hat USB-C → FT2232HL → SCIA (GPIO84/85), das Framing ist fertig, und es braucht weder CM-Core noch die fehlenden Ethernet-Patches. TCP über den CM folgt später.
 - **Firmware-Anbindung** `firmware/focp_target.c` für die C-Caller-Blöcke in Simulink.
@@ -99,6 +99,6 @@ Details und Pinbelegung: `claude/Hardware-Ueberblick_Frequenzumrichter.md`.
 ## 8. Offene Entscheidungen
 
 - MATLAB-Version und verfügbare Toolboxen (MA: R2023a, Motor Control Blockset 2.0, C2000 Blockset)
-- ~~GUI-Technologie~~ → nativ C++ (ImGui/ImPlot), erster Transport CAN
+- ~~GUI-Technologie~~ → nativ C++ (Qt 6 Widgets, Qwt), erster Transport CAN
 - Umfang der Projektarbeit: welche Phasen sind Pflicht, welche optional
 - Hardware-MA liegt vor. Es fehlen noch: vollständiger Schaltplan, `Erratas.xlsx`, BOM, Ethernet-Patches der Firmware-MA
