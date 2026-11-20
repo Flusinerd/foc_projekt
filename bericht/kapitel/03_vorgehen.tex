@@ -1,21 +1,288 @@
 \chapter{Vorgehen und Werkzeuge}
 \label{ch:vorgehen}
 
+Die Befunde aus \cref{sec:befunde} betreffen Parameter, Reglerblöcke und Messkette eines
+Modells, das auf der Hardware lauffähig war. Jede Korrektur kann daher ein bekanntes,
+funktionierendes Verhalten verändern. Das Vorgehen dieser Arbeit ist darauf ausgerichtet,
+dass jede Änderung einzeln, reproduzierbar und gegen den Ausgangsstand nachweisbar bleibt.
+Dieses Kapitel beschreibt die dafür eingesetzten Werkzeuge und Arbeitsregeln.
+
+% ---------------------------------------------------------------
 \section{Modellbasierte Entwicklung}
-% Embedded Coder, C2000 Microcontroller Blockset; Altmodell bleibt unveränderte Referenz
-\offen{Text}
+\label{sec:mbd}
 
+Wie in der \ac{MA} \cite{akguel2023} wird die Firmware nicht von Hand programmiert, sondern
+aus Simulink-Modellen generiert. Das Simulink-Modell ist damit zugleich Spezifikation,
+Simulationsgegenstand und Quelle des Quellcodes. Daraus ergeben sich drei Stufen der
+Absicherung, die in den folgenden Kapiteln nacheinander genutzt werden:
+
+\begin{enumerate}
+  \item \textbf{Simulation} des geschlossenen Regelkreises mit dem Streckenmodell aus
+    Wechselrichter und Motor (Variante \texttt{sim}),
+  \item \textbf{\ac{MIL}-Tests} einzelner Komponenten mit Simulink Test an
+    Test-Harnesses (\cref{ch:verifikation}),
+  \item \textbf{Codegenerierung} mit Embedded Coder \cite{mw_ecoder} und dem C2000
+    Microcontroller Blockset \cite{mw_c2000} (Variante \texttt{codegen}) und Erprobung auf
+    der Hardware (\cref{ch:codegen}).
+\end{enumerate}
+
+Die Entwicklungsumgebung entspricht der Hauptversion der \ac{MA}, sodass das Altmodell ohne
+Versionsmigration geöffnet und übersetzt werden kann (\cref{tab:toolchain}).
+
+\begin{table}[htbp]
+  \centering
+  \caption{Eingesetzte MATLAB-Produkte (R2023a Update 8)}
+  \label{tab:toolchain}
+  \small
+  \begin{tabular}{@{}llp{70mm}@{}}
+    \toprule
+    Produkt & Version & Verwendung \\
+    \midrule
+    MATLAB / Simulink & 9.14 / 10.7 & Modellierung, Simulation, Skripte \\
+    Embedded Coder & 7.10 & Generierung des Seriencodes \\
+    C2000 Microcontroller Blockset & 1.0 & Treiberblöcke, Hardware-Einstellungen, Build \\
+    Motor Control Blockset & 2.0 & Blöcke der \ac{FOC} aus dem Altmodell \\
+    Simulink Test & 3.8 & Test-Harnesses, Test Manager \\
+    Simulink Coverage & 5.6 & Abdeckungsmessung der \ac{MIL}-Tests \\
+    Fixed-Point Designer & 7.6 & Festkommadatentypen des Altmodells \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+Eine Ausnahme vom rein modellbasierten Ansatz ist die Kommunikationsschicht \ac{FOCP}. Sie
+ist als handgeschriebener C-Code über die Custom-Code-Schnittstelle von Simulink eingebunden.
+Die Gründe dafür werden in \cref{ch:kommunikation} dargelegt.
+
+% ---------------------------------------------------------------
+\section{Altmodell als unveränderte Referenz}
+\label{sec:referenz}
+
+Das Modell \datei{impmodel.slx} und die Parameterdatei \datei{params\_f2838.mat} der \ac{MA}
+liegen unter \datei{matlab/models/legacy/} und werden während der gesamten Arbeit nicht
+verändert. Sie dienen als Referenz in zwei Rollen:
+
+\begin{itemize}
+  \item \textbf{Äquivalenznachweis:} Nach jeder Umstrukturierung, die das Verhalten nicht
+    ändern soll, werden Altmodell und neues Anwendungsmodell mit identischer Konfiguration
+    simuliert und alle Ausgänge der Hauptkomponenten verglichen. Gefordert ist eine
+    Abweichung von exakt null (\cref{ch:bibliothek}).
+  \item \textbf{Bekannter Ausgangspunkt auf der Hardware:} Bevor korrigierte Regler auf die
+    Hardware gebracht werden, wird der unkorrigierte Stand geflasht, der laut \ac{MA}
+    funktionierte. Damit lässt sich der Aufbau zunächst mit bekanntem Verhalten prüfen.
+\end{itemize}
+
+Damit Korrekturen den Äquivalenznachweis nicht unmöglich machen, ist jede Korrektur über
+die Konfiguration abschaltbar oder so parametriert, dass sie mit dem Profil
+\texttt{legacy\_f2838} (\cref{sec:profile}) das Verhalten des Altmodells bitgenau
+reproduziert. Beispielsweise steht die Untergrenze des Drehzahlreglers in diesem Profil auf
+$-0{,}5$ wie im Altmodell, im Profil \texttt{datasheet} dagegen auf $0$.
+
+% ---------------------------------------------------------------
 \section{Skriptgesteuerte Modelländerungen}
-% Jede Änderung als Skript in matlab/tools (add_block, set_param, ...),
-% Ausgabe vorher/nachher, ein Schritt = ein Commit, Tags P1a/P1b/P1b.1,
-% Bericht je Schritt unter matlab/reports
-\offen{Text, Beispiel-Listing eines Werkzeugskripts}
+\label{sec:skripte}
 
+Änderungen an Simulink-Modellen in der grafischen Oberfläche sind schwer nachzuvollziehen:
+Die Modelldatei ist ein Binärarchiv, ein Vergleich zweier Stände zeigt kaum, was geändert
+wurde und warum. In dieser Arbeit wird deshalb jede Modelländerung als MATLAB-Skript im
+Ordner \datei{matlab/tools/} formuliert. Die Skripte nutzen die Programmierschnittstelle von
+Simulink (\texttt{load\_system}, \texttt{add\_block}, \texttt{set\_param},
+\texttt{replace\_block} und andere) und folgen einem einheitlichen Muster:
+
+\begin{enumerate}
+  \item Das Zielmodell wird geladen und der betroffene Block über seinen Pfad gesucht.
+    Fehlt der Block, bricht das Skript mit einer Fehlermeldung ab.
+  \item Der Zustand \emph{vor} der Änderung wird ausgegeben.
+  \item Ist die Änderung bereits vorhanden, endet das Skript ohne Wirkung. Dadurch können
+    Skripte gefahrlos mehrfach ausgeführt werden (Idempotenz).
+  \item Die Änderung wird ausgeführt, das Modell gespeichert und der Zustand \emph{nach}
+    der Änderung ausgegeben.
+\end{enumerate}
+
+\Cref{lst:brake_limit} zeigt dieses Muster am Beispiel der Bremsstrom-Grenze
+(\cref{ch:schutz}). Die bisher fest eingetragene Untergrenze des Drehzahlreglers wird durch
+einen Verweis auf einen Konfigurationsparameter ersetzt.
+
+\begin{lstlisting}[style=matlab, caption={Auszug aus \skript{foc\_param\_brake\_limit.m}:
+    Untergrenze des Drehzahlreglers als Konfigurationsparameter},
+    label=lst:brake_limit]
+blk = [lib '/Speed Control/PI_Controller_Speed/PID Controller'];
+if getSimulinkBlockHandle(blk) == -1
+    error('foc:a2', 'Block nicht gefunden: %s', blk);
+end
+newMin = 'ctrl_limits.Iq_min';
+before = get_param(blk, 'LowerSaturationLimit');
+if strcmp(before, newMin)
+    fprintf('%s\n  bereits parametriert: %s\n', blk, before);
+    return;
+end
+set_param(blk, 'LowerSaturationLimit', newMin);
+save_system(lib);
+fprintf('%s\n  vorher:  %s\n  nachher: %s\n', blk, before, ...
+    get_param(blk, 'LowerSaturationLimit'));
+\end{lstlisting}
+
+Die Konsolenausgabe jedes Skriptlaufs wird mit dem zugehörigen Bericht abgelegt. Damit ist
+für jede Änderung dokumentiert, welcher Parameter in welchem Block welchen Wert vorher und
+nachher hatte. Ließ sich eine Änderung nicht per Skript ausführen, wurden die Schritte in der
+Oberfläche im Bericht protokolliert. Eine Übersicht aller Werkzeugskripte enthält
+\cref{app:skripte}.
+
+\subsection*{Ausführung ohne Oberfläche}
+
+Alle Skripte lassen sich ohne grafische Oberfläche über
+\texttt{matlab -batch} ausführen. Jeder Aufruf startet eine neue MATLAB-Instanz mit leerem
+Arbeitsbereich und beginnt deshalb mit dem Laden eines Konfigurationsprofils:
+
+\begin{lstlisting}[language={}, numbers=none, caption={Aufruf eines Prüfskripts aus der
+    Kommandozeile}, label=lst:batch]
+matlab -batch "cd('matlab'); foc_startup('legacy_f2838'); test_config"
+\end{lstlisting}
+
+Bei einem unbehandelten Fehler endet der Aufruf mit einem Exitcode ungleich null. Damit
+können Prüfungen automatisiert hintereinander ausgeführt und ihr Ergebnis maschinell
+ausgewertet werden.
+
+\subsection*{Schutz der Hardware}
+
+Code generieren und Code auf die Hardware laden sind im C2000 Blockset dieselbe Funktion
+(\texttt{slbuild}). Welcher der beiden Schritte ausgeführt wird, bestimmt die im Modell
+gespeicherte \enquote{Build action}. Ein unbeabsichtigter Download auf die Hardware ist
+während der Arbeit einmal aufgetreten. Seitdem gibt es zwei getrennte Werkzeuge:
+\skript{foc\_codegen} erzeugt und übersetzt nur den Code und bricht ab, wenn die Build action
+nicht auf \enquote{Build} steht oder der External Mode aktiv ist. \skript{foc\_flash} lädt
+den Code und verlangt dafür eine ausdrückliche Freigabe als Argument. Details beschreibt
+\cref{ch:codegen}.
+
+% ---------------------------------------------------------------
 \section{Konfiguration und Profile}
-% matlab/config, matlab/design: toolboxfrei (auch GNU Octave), foc_startup(Profil)
-% Profile legacy_f2838 (bitgleich zur MA) und datasheet (Datenblatt, ausgelegte Regler)
-% test_config als Selbsttest
-\offen{Text, Tabelle der Profile}
+\label{sec:profile}
 
+In der \ac{MA} liegen alle Parameter in der Binärdatei \datei{params\_f2838.mat}. Woher ein
+Wert stammt und wie er berechnet wurde, ist daraus nicht ersichtlich. Die
+Reglerverstärkungen stammen aus einer internen, nicht dokumentierten Funktion des Motor
+Control Blockset (\cref{sec:impmodel}). Die Befunde B3 bis B6 zeigen, dass gerade diese
+Werte fehlerhaft sind.
+
+Die Parameter werden deshalb durch lesbare MATLAB-Skripte ersetzt
+(\cref{tab:konfigdateien}). Abgeleitete Größen wie Polradfluss, Bezugsgrößen,
+PWM-Periode oder Reglerverstärkungen werden aus Rohdaten berechnet und nicht von Hand
+eingetragen. Die Annahmen, die in eine Ableitung eingehen, stehen als Kommentar daneben, etwa
+dass Widerstand und Induktivität im Datenblatt des Motors Klemmenwerte sind.
+
+\begin{table}[htbp]
+  \centering
+  \caption{Konfigurationsskripte unter \datei{matlab/config/} und \datei{matlab/design/}}
+  \label{tab:konfigdateien}
+  \small
+  \begin{tabularx}{\linewidth}{@{}>{\ttfamily}lX@{}}
+    \toprule
+    \normalfont Skript & Inhalt \\
+    \midrule
+    foc\_config & Einstieg: stellt je Profil alle Variablen zusammen, die das Modell erwartet \\
+    foc\_legacy\_f2838 & Werte von \datei{params\_f2838.mat}, unverändert übernommen \\
+    foc\_cfg\_motor\_eci6360 & Motor aus dem Datenblatt mit Ableitung der Strangwerte \\
+    foc\_cfg\_inverter\_drv8300 & Leistungsstufe und Strommesskette \\
+    foc\_cfg\_board\_carpediem & Steuerplatine: Takt, PWM, ADC-Referenz und -Abtastfenster \\
+    foc\_pu\_system & Bezugsgrößen der normierten Darstellung \\
+    foc\_design\_controllers & Auslegung von Strom- und Drehzahlregler \\
+    foc\_apply\_config & legt die Variablen im Base Workspace an \\
+    \bottomrule
+  \end{tabularx}
+\end{table}
+
+\subsection{Profile}
+
+Über das Argument von \skript{foc\_startup} wird eines von zwei Profilen geladen
+(\cref{tab:profile}). Das geladene Profil steht anschließend in der Variablen
+\texttt{foc\_active\_profile}, damit Prüfskripte und Berichte erkennen können, mit welchem
+Datensatz ein Ergebnis entstanden ist.
+
+\begin{table}[htbp]
+  \centering
+  \caption{Konfigurationsprofile}
+  \label{tab:profile}
+  \small
+  \renewcommand{\arraystretch}{1.2}
+  \begin{tabularx}{\linewidth}{@{}>{\raggedright\arraybackslash}p{37mm}
+      >{\raggedright\arraybackslash}X >{\raggedright\arraybackslash}X c@{}}
+    \toprule
+    & \textbf{\texttt{legacy\_f2838}} & \textbf{\texttt{datasheet}} & \textbf{Befund} \\
+    \midrule
+    \textit{Zweck} & \textit{Äquivalenznachweis, Vergleich mit dem Altmodell}
+      & \textit{Reglerkorrekturen, Betrieb auf der Hardware} & \\
+    \midrule
+    Motordaten & wie \ac{MA} & Datenblatt, Strangwerte & B3 \\
+    Bezugsstrom $I_\mathrm{base}$ & \SI{17,6}{\ampere} & \SI{56,0}{\ampere}
+      (im Modell wirksam) & B4 \\
+    Bezugsspannung $U_\mathrm{base}$ & \SI{20,78}{\volt} & \SI{13,86}{\volt}
+      (im Modell wirksam) & B4 \\
+    Reglerverstärkungen & wie \ac{MA} & \skript{foc\_design\_controllers} & B1, B2 \\
+    ADC-Referenz & \SI{3,3}{\volt} & \SI{3,36}{\volt} & B6 \\
+    Untergrenze $i_{q,\min}$ & $-0{,}5$ (wie Altmodell) & $0$ (Labornetzteil) & -- \\
+    Schutzfunktionen & abgeschaltet & aktiv (\cref{ch:schutz}) & -- \\
+    \bottomrule
+  \end{tabularx}
+\end{table}
+
+Das Profil \texttt{legacy\_f2838} reproduziert jedes Feld der Parameterdatei der \ac{MA}
+bitgenau. Zusätzlich legt es die in der Datei fehlende Variable \texttt{dataType} an
+(Befund B5). Das Profil \texttt{datasheet} enthält die korrigierten Werte. Neue Parameter,
+die im Lauf der Arbeit hinzukamen, etwa die Grenzen in der Struktur \texttt{ctrl\_limits},
+erhalten in beiden Profilen einen Wert: im Profil \texttt{legacy\_f2838} den Wert, der dem
+Altmodell entspricht, im Profil \texttt{datasheet} den für den Betrieb vorgesehenen.
+
+\subsection{Selbsttest der Konfiguration}
+
+Das Skript \skript{test\_config} prüft die Konfiguration in drei Teilen:
+
+\begin{enumerate}
+  \item Das Profil \texttt{legacy\_f2838} wird Feld für Feld mit
+    \datei{params\_f2838.mat} verglichen. Jede Abweichung, auch in der letzten
+    Gleitkommastelle, gilt als Fehler.
+  \item Für das Profil \texttt{datasheet} werden abgeleitete Größen gegen unabhängig
+    berechnete Erwartungswerte geprüft, zum Beispiel die Leerlaufdrehzahl aus dem
+    Polradfluss, die Bezugsgröße des Stroms aus der Messkette oder die Durchtrittsfrequenz
+    des ausgelegten Drehzahlregelkreises.
+  \item Für beide Profile wird geprüft, ob alle Variablen vorhanden sind, die die Modelle
+    referenzieren.
+\end{enumerate}
+
+Nach jeder Änderung an \datei{config/} oder \datei{design/} muss \skript{test\_config}
+\enquote{ALL PASSED} melden. Die Prüfung läuft in wenigen Sekunden und ist damit die erste
+Stufe jedes Nachweises.
+
+% ---------------------------------------------------------------
 \section{Versionsverwaltung und Nachvollziehbarkeit}
-\offen{Text}
+\label{sec:git}
+
+Alle Modelle, Skripte, Berichte und die PC-Software liegen in einem gemeinsamen
+Git-Repository. Für die Arbeit gelten folgende Regeln:
+
+\begin{itemize}
+  \item \textbf{Eine Änderung pro Schritt.} Jeder Arbeitsschritt umfasst genau eine
+    fachliche Änderung und endet mit einem eigenen Commit. Dadurch lässt sich der Einfluss
+    jeder Änderung getrennt in Simulation und auf der Hardware bewerten und bei Bedarf
+    gezielt zurücknehmen.
+  \item \textbf{Tags für Meilensteine.} Stände, auf die später Bezug genommen wird, sind mit
+    Git-Tags markiert: \texttt{P1a} (Bibliothek, bitgleich zum Altmodell), \texttt{P1b}
+    (erste Reglerkorrektur) und \texttt{P1b.1} (Reglerkorrektur mit korrigierter Messkette).
+    Jeder dieser Stände kann wiederhergestellt und erneut simuliert oder geflasht werden.
+  \item \textbf{Ein Bericht je Schritt.} Zu jedem Schritt gehört ein Bericht unter
+    \datei{matlab/reports/}, benannt nach Schritt und Datum. Er enthält die ausgeführten
+    Befehle, die Ergebnisse und bei Fehlern die vollständige Fehlermeldung, eine Vermutung
+    zur Ursache und einen Vorschlag. Kennzahlen und Abbildungen liegen daneben.
+  \item \textbf{Keine generierten Dateien.} Erzeugter Code, Build-Artefakte und
+    Simulink-Caches sind über \datei{.gitignore} ausgeschlossen. Sie lassen sich aus den
+    versionierten Quellen jederzeit neu erzeugen.
+  \item \textbf{Bei Fehlern anhalten.} Weicht ein Ergebnis von der Erwartung ab, wird der
+    Befund dokumentiert, statt das Modell durch Ausprobieren anzupassen. Dass eine Kennzahl
+    erfüllt ist, reicht dabei nicht aus: Der Stand \texttt{P1b} erfüllte alle Kennzahlen,
+    zeigte in den Verläufen aber eine Dauerschwingung (\cref{ch:regler}).
+\end{itemize}
+
+Der Verlauf der wichtigsten Stände ist in \cref{app:verlauf} zusammengestellt. Über die
+Kombination aus Commit, Konfigurationsprofil und Bericht lässt sich für jedes Ergebnis in
+diesem Bericht angeben, mit welchem Modellstand und welchen Parametern es entstanden ist.
+
+\offen{Angabe zu eingesetzten KI-Werkzeugen (Code-Assistent für Skripte und Analysen) nach
+  den Vorgaben der Hochschule ergänzen}

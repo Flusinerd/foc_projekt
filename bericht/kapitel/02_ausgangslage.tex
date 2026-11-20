@@ -1,25 +1,424 @@
 \chapter{Ausgangslage}
 \label{ch:ausgangslage}
 
+Grundlage dieser Arbeit sind zwei Masterarbeiten, die 2023 an der Hochschule Bochum
+parallel entstanden sind: die Hardware des Frequenzumrichters \cite{darici2023} und die
+modellbasiert entwickelte Firmware \cite{akguel2023}. Dieses Kapitel beschreibt den
+vorgefundenen Stand aus Sicht der Software. Es stellt zunächst das Zielsystem vor, soweit
+es für das Verständnis der Firmware nötig ist, dann das Simulink-Modell der Masterarbeit
+und schließlich die Befunde, die sich bei der Analyse dieses Modells ergeben haben. Diese
+Befunde bestimmen die Reihenfolge der späteren Arbeitsschritte.
+
+% ---------------------------------------------------------------
 \section{Zielsystem im Überblick}
-% Nur so viel Hardware, wie zum Verständnis der Software nötig ist:
-% TMS320F28386D (C28x, 200 MHz, ext. 25-MHz-Oszillator), DRV8300DIPW-EVM,
-% ECI 63.60 (24 V, 4 Polpaare, Hall). Details im Hardwareteil.
-\offen{Text, ggf.\ Blockbild Signalfluss}
+\label{sec:zielsystem}
 
+Der Frequenzumrichter besteht aus drei Baugruppen (\cref{fig:zielsystem}):
+
+\begingroup\sloppy
+\begin{description}
+  \item[Steuerplatine] Eigenentwicklung aus \cite{darici2023} mit einem
+    \textbf{TMS320F28386D} \cite{ti_f2838x_dm}. Der Baustein
+    enthält zwei C28x-Kerne (CPU1, CPU2) mit je \SI{200}{\mega\hertz} und einen
+    Arm-Cortex-M4-Kern, den \ac{CM}, für Ethernet, der über \ac{IPC} Daten mit den C28x-Kernen
+    austauscht. Die Firmware läuft ausschließlich auf CPU1.
+    Den Systemtakt erzeugt ein externer \SI{25}{\mega\hertz}-Oszillator. Über USB-C stellt
+    ein FT2232HL eine \acs{JTAG}-Debugschnittstelle und eine serielle
+    Schnittstelle bereit, über einen galvanisch getrennten Transceiver ist \ac{CAN}
+    herausgeführt.
+  \item[Leistungsstufe] Das zugekaufte \ac{EVM} \textbf{DRV8300DIPW-EVM}
+    \cite{ti_slvubv6} mit dreiphasiger MOSFET-Brücke, Gatetreiber DRV8300, drei
+    Low-Side-Shunts mit \ac{CSA}, Temperatursensor und dem Anschluss für die
+    Hall-Sensoren. Es ist über zwei Stiftleisten im Raster des LaunchPads F280049C mit
+    der Steuerplatine verbunden.
+  \item[Motor] Der Motor ist ein permanentmagneterregter Synchronmotor vom Typ \textbf{ebm-papst ECI~63.60} \cite{ebmpapst_eci6360}. Er ist
+     für \SI{24}{\volt} ausgelegt und besitzt vier Polpaare. Drei digitale Hall-Sensoren ermöglichen eine Lageerfassung der Ausgangswelle.
+\end{description}
+\endgroup
+
+\begin{figure}[htbp]
+  \centering
+  \begin{tikzpicture}[
+      node distance=8mm and 14mm,
+      box/.style={draw, rounded corners=2pt, align=center, minimum height=26mm,
+                  text width=34mm, font=\small},
+      sig/.style={-Latex, font=\scriptsize},
+    ]
+    \node[box] (mcu) {\textbf{Steuerplatine}\\TMS320F28386D\\CPU1: Regelung\\
+      \SI{25}{\mega\hertz} ext.\ Oszillator};
+    \node[box, right=22mm of mcu] (evm) {\textbf{DRV8300DIPW-EVM}\\Gatetreiber\\
+      B6-Brücke\\3 Shunts + CSA};
+    \node[box, right=14mm of evm, text width=22mm] (mot) {\textbf{ECI 63.60}\\PMSM\\
+      4 Polpaare\\Hall A/B/C};
+    \node[box, below=10mm of mcu, minimum height=9mm] (pc) {PC / Bedienung};
+    \node[box, below=10mm of evm, minimum height=9mm] (psu) {Labornetzteil
+      \SI{24}{\volt}};
+
+    \draw[sig] ([yshift=8mm]mcu.east) -- node[above]{6$\times$ PWM} ([yshift=8mm]evm.west);
+    \draw[sig] ([yshift=-1mm]evm.west) -- node[above]{$i_a, i_b, i_c$, PVDD}
+      ([yshift=-1mm]mcu.east);
+    \draw[sig] ([yshift=-9mm]evm.west) -- node[above]{Hall, Temp.} ([yshift=-9mm]mcu.east);
+    \draw[sig] ([yshift=4mm]evm.east) -- node[above]{$u_{abc}$} ([yshift=4mm]mot.west);
+    \draw[sig] ([yshift=-6mm]mot.west) -- node[below]{Hall} ([yshift=-6mm]evm.east);
+    \draw[Latex-Latex, font=\scriptsize] (pc) -- node[right]{CAN, USB (JTAG/UART)} (mcu);
+    \draw[sig] (psu) -- node[right]{PVDD} (evm);
+  \end{tikzpicture}
+  \caption{Aufbau des Zielsystems mit den für die Firmware relevanten Signalen}
+  \label{fig:zielsystem}
+\end{figure}
+
+Die für die Firmware wichtigen Peripherien sind in \cref{tab:peripherie} zusammengefasst.
+Die drei Brückenzweige werden von ePWM6 bis ePWM8 angesteuert, mit \SI{20}{\kilo\hertz}
+im Up-Down-Zählbetrieb (mittensymmetrische \ac{PWM}). Die Totzeit erzeugt der Gatetreiber,
+nicht der Mikrocontroller. Eine Besonderheit des DRV8300\textbf{DI} ist, dass er die
+Low-Side-Eingänge INLx invertiert. Der Mikrocontroller gibt deshalb auf ePWMxA und ePWMxB
+dasselbe Signal aus. ePWM6 startet zugleich die Wandlung der Phasenströme, und zwar dann,
+wenn die Low-Side-Schalter leiten und die Shunts den Strom sehen. Der Interrupt am Ende
+dieser Wandlung ruft die Stromregelung auf. Damit ist die Stromregelung fest an die
+\ac{PWM}-Periode von \SI{50}{\micro\second} gekoppelt.
+
+\begin{table}[htbp]
+  \centering
+  \caption{Von der Firmware der \ac{MA} genutzte Peripherie (CPU1)}
+  \label{tab:peripherie}
+  \small
+  \begin{tabularx}{\linewidth}{@{}>{\raggedright}p{36mm}>{\raggedright}p{34mm}
+      >{\raggedright\arraybackslash}X@{}}
+    \toprule
+    Funktion & Peripherie & Bemerkung \\
+    \midrule
+    Brückenansteuerung & ePWM6/7/8 (GPIO10--15) & \SI{20}{\kilo\hertz}, Periode 5000 Takte \\
+    Phasenströme $i_a$, $i_b$ & ADCINB0, ADCINB2 & Trigger ePWM6-SOCA, Interrupt ADCB1 $\to$ Stromregelung \\
+    Phasenstrom $i_c$ & ADCINB3 & verdrahtet, aber nicht genutzt \\
+    Zwischenkreisspannung, GVDD & ADCINA5, ADCINC3 & Unterspannungserkennung \\
+    MOSFET-Temperatur & ADCINC2 & TMP23x, Übertemperatur \\
+    Drehzahlsollwert & ADCINA0 & Potentiometer \\
+    Hall A/B/C & eCAP1--3 (GPIO24--26) & Interrupt bei jedem Flankenwechsel \\
+    SafeState-Taster & GPIO30 & Not-Aus in Software \\
+    Kommunikation & eCAN-A, IPC zum CM & CAN-Kommandos, Ethernet-Logging über den CM \\
+    \bottomrule
+  \end{tabularx}
+\end{table}
+
+Einige Eigenschaften der Hardware wirken sich unmittelbar auf die Software aus. Dazu
+zählen die Speisung der ADC-Referenz aus der \SI{3,3}{\volt}-Schaltreglerschiene und die
+nur eingeschränkt realisierbare Überstromabschaltung in Hardware. Die Analyse dieser
+Eigenschaften ist Gegenstand des Hardwareteils \hwteil{Hardware-Review}. Im vorliegenden
+Bericht werden sie nur insoweit betrachtet, als sie Entwurf und Verhalten der Firmware
+beeinflussen.
+
+% ---------------------------------------------------------------
 \section{Simulink-Modell der Masterarbeit}
-% impmodel.slx: Struktur (Input Controller, Speed Control, Current Control,
-% Scaling DutyCycles, ...), Parameterdatei params_f2838.mat, Abtastzeiten,
-% vorhandene MIL-Harnesses
-\offen{Text, Abbildung oberste Modellebene}
+\label{sec:impmodel}
 
+Die Firmware der \ac{MA} \cite{akguel2023} enthält keinen handgeschriebenen C-Code. Sie
+wird vollständig mit Embedded Coder \cite{mw_ecoder} und dem C2000 Microcontroller Blockset
+\cite{mw_c2000} aus dem Modell \datei{impmodel.slx} generiert (MATLAB R2023a). Die Parameter
+(Motor, Leistungsstufe, Bezugsgrößen, Reglerverstärkungen, Abtastzeiten) liegen in der
+Binärdatei \datei{params\_f2838.mat}. Beide Dateien sind im Repository unverändert unter
+\datei{matlab/models/legacy/} abgelegt und dienen in dieser Arbeit als Referenz für alle
+Vergleiche. \Cref{fig:impmodel} zeigt die oberste Modellebene.
+
+\begin{figure}[htbp]
+  \centering
+  \begin{tikzpicture}[
+      font=\footnotesize,
+      sub/.style={draw, align=center, minimum height=12mm, text width=22mm,
+                  font=\footnotesize\sffamily},
+      irq/.style={draw, dashed, align=center, minimum height=9mm, text width=22mm,
+                  font=\footnotesize\sffamily},
+      aux/.style={draw, align=center, minimum height=7mm, text width=22mm,
+                  font=\footnotesize\sffamily},
+      sig/.style={-Latex},
+      lab/.style={font=\scriptsize, align=center},
+    ]
+    % Hauptsignalfluss
+    \node[sub] (in) {Input\\Controller};
+    \node[sub, right=16mm of in] (spd) {Speed Control\\\scriptsize $T_s = \SI{0,5}{ms}$};
+    \node[sub, right=16mm of spd] (trq) {Torque Controller\\\scriptsize $T_s = \SI{50}{\micro s}$};
+    \node[sub, right=16mm of trq] (plant) {Inverter and\\Motor -- Plant\\Model};
+
+    % Interruptgesteuerte Subsysteme
+    \node[irq, above=14mm of trq] (cg) {Code\\Generation};
+    \node[irq, above=14mm of spd] (hall) {Hall Sensor\\A / B / C};
+    \node[irq, above=14mm of plant] (ipc) {IPC Write for\\eCAP INTs};
+
+    % Initialisierung und Hilfsfunktionen
+    \node[aux, below=12mm of in] (init) {System Initialize};
+    \node[aux, below=12mm of spd] (off) {ADC Offset Function};
+    \node[aux, below=12mm of plant] (hb) {Heartbeat LED};
+
+    \draw[sig] (in) -- node[lab, above]{Sollwert,} node[lab, below]{Freemode} (spd);
+    \draw[sig] (spd) -- node[lab, above]{$i_{dq,\mathrm{ref}}$,} node[lab, below]{Freemode} (trq);
+    \draw[sig] ([yshift=3mm]trq.east) -- node[lab, above]{Tastgrade} ([yshift=3mm]plant.west);
+    \draw[sig] ([yshift=-3mm]plant.west) -- node[lab, below]{$i_{ab}$, Lage} ([yshift=-3mm]trq.east);
+    \draw[sig] (trq.south) -- ++(0,-5mm) -| node[lab, pos=0.25, below]{Drehzahl} (spd.south);
+    \draw[sig] (cg) -- node[lab, right]{ADCB1} (trq);
+    \draw[sig] (cg) -- node[lab, above]{eCAP1--3} (hall);
+    \draw[sig, densely dotted] (hall) -- node[lab, right]{Data Stores} (spd);
+  \end{tikzpicture}
+  \caption{Vereinfachte oberste Ebene des Modells \datei{impmodel.slx} aus \cite{akguel2023}.
+    Gestrichelt: durch Interrupts aufgerufene Subsysteme. Die Original-Modellansicht zeigt
+    \cref{fig:impmodel_orig} im Anhang.}
+  \label{fig:impmodel}
+\end{figure}
+
+\subsection{Struktur}
+
+Das Modell gliedert sich in folgende Subsysteme:
+
+\begingroup\sloppy
+\begin{description}
+  \item[\block{System Initialize}, \block{ADC Offset Function}] Initialisierung, unter
+    anderem der Pull-up-Widerstände über direkte Registerzugriffe, und Kalibrierung des
+    Stromsensor-Offsets aus acht Abtastwerten mit Plausibilitätsprüfung.
+  \item[\block{Code Generation}] Die Hardware-Interrupts: ADCB1 ruft den
+    \block{Torque Controller} auf, eCAP1 bis eCAP3 die Hall-Auswertung.
+  \item[\block{Hall Sensor A/B/C}] Interrupt-Routinen je Hall-Signal. Sie lesen den
+    Hall-Zustand, prüfen seine Gültigkeit und legen Zustand, Drehrichtung und Zeitstempel
+    in globalen Data Stores ab.
+  \item[\block{Input Controller}] Sollwert vom Potentiometer, Unterspannung,
+    Übertemperatur, SafeState-Taster sowie die CAN-Kommandos \enquote{Freemode} und
+    \enquote{speedMode}. Außerdem werden Zwischenkreis- und Gatetreiberspannung zyklisch
+    über CAN gesendet.
+  \item[\block{Speed Control}] Drehzahlregelung, Abtastzeit \SI{0,5}{\milli\second}. Sie
+    enthält die Freemode-Logik (\block{Digital\_Freemode\_Check} und
+    \block{Mechanical\_Freemode\_Check}), die Sollwertberechnung (\block{Speed calculator})
+    und einen \ac{PI} als Drehzahlregler (\block{PI\_Controller\_Speed}). Ausgang ist der
+    Stromsollwert $\boldsymbol{i}_{dq,\mathrm{ref}} = (0,\ i_{q,\mathrm{ref}})$.
+  \item[\block{Torque Controller}] Die eigentliche \ac{FOC}. Sie wird alle
+    \SI{50}{\micro\second} von der \ac{ISR} des \ac{ADC} aufgerufen und umfasst
+    Stromerfassung und Skalierung, Lage und Drehzahl aus den Hall-Signalen, Clarke- und
+    Park-Transformation, \acs{PI}-Stromregler für $d$ und $q$,
+    Spannungsbegrenzung (\enquote{DQ-Limiter}), inverse Park-Transformation,
+    Raumzeigermodulation und Umrechnung in Vergleichswerte der ePWM-Module.
+  \item[\block{Inverter and Motor -- Plant Model}] Streckenmodell aus Wechselrichter
+    (Mittelwertmodell) und Motor für die Simulation.
+  \item[\block{IPC Write for eCAP INTs}, \block{Heartbeat LED}] Übertragung von Messwerten
+    an den \ac{CM}-Kern, der sie über ein zweites Modell (\datei{TCP\_Server.slx}) per
+    Ethernet an den PC sendet, sowie eine Blink-LED als Lebenszeichen.
+\end{description}
+\endgroup
+
+Die Regelung ist eine klassische Kaskade aus äußerem Drehzahl- und innerem Stromregelkreis
+ohne Feldschwächung ($i_{d,\mathrm{ref}} = 0$). Gerechnet wird in normierten Größen, angegeben in
+\ac{PU}, überwiegend im Datentyp \texttt{single} oder \texttt{fixdt(1,32,17)}. Die
+Reglerverstärkungen wurden nicht von Hand eingestellt, sondern mit der internen, nicht
+dokumentierten Funktion \texttt{mcb.internal.SetControllerParameters} des Motor Control
+Blockset aus den Motordaten berechnet.
+
+Alle hardwarenahen Teile sind über Variantenblöcke doppelt ausgeführt: Die Variante
+\texttt{sim} speist die Regelung aus dem Streckenmodell, die Variante \texttt{codegen}
+aus den Treiberblöcken des C2000 Blocksets. Simulations- und Codegenerierungspfad teilen
+sich also die Reglerlogik, nicht aber die Messkette. Diese Trennung wird bei der Diagnose
+in \cref{ch:regler} eine Rolle spielen.
+
+\subsection{Sicherheitslogik}
+
+Die einzige Rückfallebene ist der \enquote{Freemode}: Alle Schalter der Brücke werden
+geöffnet, der Motor läuft frei aus, und der Fehler des Drehzahlreglers wird auf null
+gesetzt. Ausgelöst wird er durch Unterspannung, Übertemperatur (bis zum Neustart
+gespeichert), ein CAN-Kommando oder den SafeState-Taster. Eine Überspannungs- oder
+Überstromabschaltung gibt es nicht. Die Untergrenze des Drehzahlreglers ist fest auf
+$-0{,}5$ gesetzt, was ein leichtes Bremsen erlaubt.
+
+\subsection{Anforderungen und Tests}
+
+Die \ac{MA} leitet aus einem Lastenheft neun Systemmodellanforderungen
+(SW\_ANF\_01 bis SW\_ANF\_09) ab. Vier davon sind mit Simulink Test als \ac{MIL}-Tests an
+Test-Harnesses im Modell abgesichert (\cref{tab:mil_ma}), alle vier bestanden. Die
+feldorientierte Regelung selbst (SW\_ANF\_06) und die Hall-Auswertung (SW\_ANF\_09) sind
+nur auf der Hardware gezeigt, nicht modellbasiert getestet. Die Testdatei
+\datei{Testfile\_F2838.mldatx} ist Teil der \ac{MA}.
+
+\begin{table}[htbp]
+  \centering
+  \caption{\ac{MIL}-Tests der \ac{MA} \cite{akguel2023}}
+  \label{tab:mil_ma}
+  \small
+  \begin{tabularx}{\linewidth}{@{}llX@{}}
+    \toprule
+    Harness & Getesteter Block & Anforderung \\
+    \midrule
+    \texttt{Freemode\_Check\_TestHarness} & \block{Digital\_Freemode\_Check}
+      & SW\_ANF\_01/07/08 (Freemode bei CAN, Unterspannung, Übertemperatur) \\
+    \texttt{SafeState\_TestHarness} & \block{Mechanical\_Freemode\_Check}
+      & SW\_ANF\_03 (SafeState-Taster) \\
+    \texttt{MaxVel\_TestHarness} & \block{Speed calculator}
+      & SW\_ANF\_04 (Höchstdrehzahl je speedMode) \\
+    \texttt{SpeedController\_TestHarness} & \block{PI\_Controller\_Speed}
+      & SW\_ANF\_05 (Drehzahlregler, Begrenzung) \\
+    \bottomrule
+  \end{tabularx}
+\end{table}
+
+\subsection{Was nicht übernommen werden konnte}
+
+Zwei Teile des Ausgangsstands ließen sich nicht direkt weiterverwenden:
+
+\begin{itemize}
+  \item \textbf{Ethernet-Logging:} Weil die Ethernet-Pins auf der eigenen Platine anders
+    belegt sind als auf der controlCARD des Herstellers, wurden in der \ac{MA} Dateien des
+    C2000 Support Package geändert (Präprozessorschalter
+    \texttt{CARPEDIEM\_PIN\_CORRECTION}). Diese Änderungen sind nicht Teil des Archivs.
+    Außerdem verstößt eine Änderung an der Toolbox gegen die Reproduzierbarkeit des Builds.
+    Die Ethernet-Strecke über den \ac{CM} wurde daher nicht weiterverfolgt; die
+    Kommunikation läuft stattdessen über \ac{CAN} (\cref{ch:kommunikation}).
+  \item \textbf{Zielprozessor:} Das Modell ist für den TMS320F28388D der controlCARD
+    konfiguriert, auf der Platine sitzt der pinkompatible TMS320F28386D. Auch die
+    Taktquelle in den Hardware-Einstellungen musste an den externen
+    \SI{25}{\mega\hertz}-Oszillator angepasst werden (\cref{ch:codegen}).
+\end{itemize}
+
+% ---------------------------------------------------------------
 \section{Befunde aus der Modellanalyse}
 \label{sec:befunde}
-% Tabelle B1-B6 (Quelle: docs/P0_P1_Anleitung.md):
-% B1 I-Anteil Drehzahlregler um Größenordnungen zu klein (Ki doppelt mit Ts)
-% B2 Stromregler: Handkorrektur Kp, I zu klein, Ausgang auf [0,1] begrenzt
-% B3 Motordaten um Faktoren verschoben
-% B4 Strom-Skalierung / PU-Basis
-% B5 dataType fehlt in der .mat-Datei
-% B6 ADC-Referenz 3,36 V statt 3,3 V
-\offen{Tabelle und kurze Erläuterung}
+
+Bevor das Modell umgebaut wurde, wurden Reglerblöcke, Parameterdatei und Messkette im
+Detail untersucht. Die Ergebnisse sind in \cref{tab:befunde} als Befunde B1 bis B6
+zusammengefasst. Sie werden im weiteren Bericht mit diesen Kürzeln referenziert.
+
+\begin{table}[htbp]
+  \centering
+  \caption{Befunde aus der Analyse des Altmodells}
+  \label{tab:befunde}
+  \small
+  \renewcommand{\arraystretch}{1.15}
+  \begin{tabularx}{\linewidth}{@{}l>{\raggedright\arraybackslash}X
+      >{\raggedright\arraybackslash}X >{\raggedright\arraybackslash}p{27mm}@{}}
+    \toprule
+    Nr. & Befund & Wirkung & Behandlung \\
+    \midrule
+    B1 & I-Anteil des Drehzahlreglers um Größenordnungen zu klein
+       & praktisch P-Regler, bleibende Drehzahlabweichung
+       & \cref{ch:regler} \\
+    B2 & Stromregler: I-Anteil wie B1 zu klein, $K_p$ von Hand verändert,
+         Ausgang auf $[0, 1]$ begrenzt
+       & negative Stellspannung unmöglich
+       & \cref{ch:regler} \\
+    B3 & Motordaten um Faktoren neben dem Datenblatt
+       & Auslegung und Streckenmodell passen nicht zum Motor
+       & Profil \texttt{datasheet} (\cref{ch:vorgehen}) \\
+    B4 & Strom-PU-Basis im Modell weicht von der Bezugsgröße ab
+       & wirksame Reglerverstärkung anders als ausgelegt
+       & \cref{ch:regler} \\
+    B5 & Variable \texttt{dataType} fehlt in der Parameterdatei
+       & Modell nicht ohne Zusatzschritt übersetzbar
+       & \cref{ch:bibliothek} \\
+    B6 & ADC-Referenz \SI{3,36}{\volt} statt \SI{3,3}{\volt}
+       & \SI{1,8}{\percent} Verstärkungsfehler
+       & Profil \texttt{datasheet} \\
+    \bottomrule
+  \end{tabularx}
+\end{table}
+
+\subsection*{B1 und B2: Integralanteil der Regler}
+
+Am Block \block{PI\_Controller\_Speed} ist als Integralverstärkung
+\texttt{Ki\_speed\_texas*Ts\_speed} eingetragen, gleichzeitig ist die Option
+\texttt{UseKiTs} gesetzt. Die Variable \texttt{Ki\_speed\_texas} stammt aus
+\texttt{SetControllerParameters} und ist bereits der Integralbeiwert je Abtastschritt in der
+Form der TI-Bibliothek, also $T_s/T_n$ ohne $K_p$. Er wird im Block ein zweites Mal mit der
+Abtastzeit multipliziert. Statt etwa $0{,}095$ je Schritt wirkt so ein Wert von etwa
+$6{,}6 \cdot 10^{-6}$. Der Drehzahlregler arbeitet damit praktisch als reiner P-Regler mit
+$K_p = 7{,}2$ und kann eine bleibende Regelabweichung nicht ausregeln.
+
+Die beiden Stromregler im \block{Torque Controller} haben denselben Fehler im
+Integralanteil. Dazu kommen zwei weitere Eingriffe: Der Proportionalbeiwert ist als
+\texttt{Kp\_i - 0.0002} eingetragen, offenbar eine Handkorrektur, und der Reglerausgang ist
+auf $[0, 1]$ begrenzt. Im Betrieb braucht die $d$-Achse aber eine negative Spannung, etwa
+$u_d \approx -\omega L i_q$. Die Begrenzung verhindert das.
+
+Ob \texttt{UseKiTs} bedeutet, dass der eingetragene Wert bereits $K_i T_s$ ist, oder dass der
+Block intern mit $T_s$ multipliziert, ändert nur die Größe des Fehlers. In beiden Lesarten
+ist der Integralanteil um mindestens drei Größenordnungen zu klein.
+
+\subsection*{B3: Motordaten}
+
+Die Motordaten in \datei{params\_f2838.mat} weichen deutlich vom Datenblatt ab
+(\cref{tab:motordaten}). Die ältere Parameterdatei der \ac{MA} für das LaunchPad F280049C
+enthält dagegen die Datenblattwerte. Aus Spannungskonstante und Leerlaufdrehzahl
+(\SI{6000}{\per\minute} bei \SI{24}{\volt}) ergibt sich ein Polradfluss von etwa
+\SI{5,9}{\milli\volt\second}. Widerstand und Induktivität im Datenblatt sind sehr
+wahrscheinlich Werte zwischen zwei Klemmen, je Strang also die Hälfte. Die
+Reglerverstärkungen der \ac{MA} sind aus den abweichenden Werten berechnet. Der
+Proportionalbeiwert des Stromreglers ist dadurch etwa um den Faktor 500 kleiner als bei
+Auslegung mit den Datenblattwerten. Motorparameter gemessen hat die \ac{MA} nicht: Der Autor
+nennt das selbst als Schwachstelle \cite{akguel2023}.
+
+\begin{table}[htbp]
+  \centering
+  \caption{Motordaten ECI~63.60: Parameterdatei der \ac{MA} und Ableitung aus dem
+    Datenblatt \cite{ebmpapst_eci6360}}
+  \label{tab:motordaten}
+  \small
+  \begin{tabular}{@{}lrr@{}}
+    \toprule
+    Größe & \datei{params\_f2838.mat} & aus Datenblatt, je Strang \\
+    \midrule
+    Strangwiderstand $R_s$ & \SI{9}{\milli\ohm} & \SI{22,5}{\milli\ohm} \\
+    Induktivität $L_d = L_q$ & \SI{0,153}{\micro\henry} & \SI{38}{\micro\henry} \\
+    Polradfluss $\Psi_\mathrm{PM}$ & \SI{0,69}{\milli\volt\second} & \SI{5,9}{\milli\volt\second} \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\subsection*{B4: Skalierung der Strommessung}
+
+Die Bezugsgrößen des Modells (Struktur \texttt{PU\_System}) setzen
+$I_\mathrm{base} = \SI{17,6}{\ampere}$ und $U_\mathrm{base} = \SI{20,78}{\volt}$ an, und mit
+diesen Werten werden die Regler ausgelegt. Im Codegenerierungspfad wird der Strom aber
+direkt als $(\text{ADC} - \text{Offset})/2048$ berechnet. Ein \ac{PU} ist dort also der
+Strom, bei dem der Strommessverstärker \SI{1,65}{\volt} Hub liefert. \texttt{PU\_System}
+kommt in diesem Pfad nicht vor. Der Parameter \texttt{ISenseVoltPerAmp}
+(\SI{3}{\milli\volt\per\ampere}) berücksichtigt nur den Shunt, nicht die Verstärkung des
+\ac{CSA} auf dem \ac{EVM}. Welcher Strom einem \ac{PU} tatsächlich entspricht und welches
+Vorzeichen die Messung hat, war zu Beginn offen. Geklärt wurde das erst mit den Unterlagen
+des \ac{EVM} \cite{ti_slvubv6, ti_slvc817} im Zuge der Reglerkorrektur
+(\cref{ch:regler}).
+
+\subsection*{B5 und B6: Parameterdatei und ADC-Referenz}
+
+Das Modell verwendet eine Variable \texttt{dataType} zur Wahl zwischen Gleit- und
+Festkommavarianten, die in \datei{params\_f2838.mat} fehlt. Ohne zusätzliches Anlegen dieser
+Variable lässt sich das Modell nicht übersetzen. Die Referenzspannung der \ac{ADC} ist in den
+Parametern mit \SI{3,3}{\volt} angesetzt. Auf der Platine hängt sie an der
+\SI{3,3}{\volt}-Versorgung, die mit \SI{3,36}{\volt} gemessen wurde \cite{darici2023}. Alle
+analogen Messwerte haben dadurch einen Verstärkungsfehler von \SI{1,8}{\percent}.
+
+\subsection*{Weitere Auffälligkeiten}
+
+Neben den Befunden B1 bis B6 fielen kleinere Unstimmigkeiten auf, die keinen eigenen
+Arbeitsschritt erforderten, aber bei einer Weiterentwicklung zu beachten sind:
+
+\begin{itemize}
+  \item Der Hall-Lageoffset ist doppelt gepflegt: \num{0,411} in den Motorparametern,
+    \num{0,38} fest im Block \block{Mechanical to Electrical Position}. Der Wert im Block
+    wurde laut \ac{MA} experimentell ermittelt.
+  \item Die Mailbox für das CAN-Kommando \enquote{speedMode} ist in der
+    Schnittstellentabelle der \ac{MA} mit 10, im Modell mit 15 angegeben.
+  \item Mehrere Anforderungstexte entsprechen nicht mehr dem Modell, zum Beispiel die
+    Begrenzung des Drehzahlreglers in SW\_ANF\_05.
+  \item Die \ac{IPC}-Blöcke senden ständig an den \ac{CM}-Kern, auch wenn dort kein Programm
+    läuft. Das führte später auf der Hardware dazu, dass die Strom-\ac{ISR} hängen blieb
+    (\cref{ch:kommunikation}).
+\end{itemize}
+
+\section{Folgerungen}
+\label{sec:folgerungen}
+
+Der Ausgangsstand ist eine lauffähige, in sich geschlossene Firmware mit einer
+nachvollziehbaren Struktur und einem Grundstock an \ac{MIL}-Tests. Für eine
+Weiterverwendung als Framework fehlt aber dreierlei: 
+\begin{enumerate}
+	\item Die Parameter sind nicht
+	nachvollziehbar (Binärdatei, interne Auslegungsfunktion, Befunde B3 bis B6).
+	\item Die Regler
+	arbeiten nicht wie ausgelegt (B1, B2).
+	\item Die Komponenten sind fest in ein einziges
+	Anwendungsmodell eingebaut.
+\end{enumerate}
+ Daraus ergibt sich die Reihenfolge der folgenden Kapitel:
+zuerst die Parameter aus Skripten bei bitgleichem Verhalten, dann die Aufteilung in eine
+Bibliothek, erst danach die Korrekturen an den Reglern. Jede Korrektur wurde einzeln vorgenommen und in anschließend in der Simulation nachgewiesen.
+Dadurch war es möglich die Korrektheit jeder Korrektur zu überprüfen bevor die nächste vorgenommen wurde.
