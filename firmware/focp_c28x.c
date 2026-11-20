@@ -126,6 +126,11 @@ float focp_tune_udc_max;
 float focp_tune_i_trip;
 /* Number of start-up trips cleared when the protection was armed (diagnosis via JTAG/host tests). */
 volatile uint16_t focp_c28x_boot_trips;
+/* Trip diagnosis (JTAG, 2026-11-20): [0] reason of the first ISR trip (1 SW_OC, 2 SUM), [1] its time in ms,
+ * [2..4] ia, ib, ic in A, [5] I_C offset (counts), [6] FOCP active, [7] ms of the first latched trip seen
+ * by the speed task, [8] ms of the start-up clear, [9] largest |i| before arming (A). */
+volatile float focp_c28x_trip_diag[10];
+static uint32_t s_ms;
 
 /* Values compiled into the firmware. LOAD_DEFAULTS restores these and not the table defaults,
  * whose spd.Iq_min = -5 A would brake into a lab supply. */
@@ -204,6 +209,8 @@ void focp_c28x_step(uint16_t undervoltage, uint16_t overvoltage, uint16_t freemo
         s_arm_ms = 0;
         s_trip_reason = TRIP_HW;
         focp_c28x_boot_trips = 0u;
+        s_ms = 0u;
+        for (k = 0; k < 10u; ++k) focp_c28x_trip_diag[k] = 0.0f;
         s_ic_acc = s_ic_n = 0u;
         s_ic_valid = s_sum_cnt = 0u;
         s_init = 1;                             /* last: enables focp_c28x_isr */
@@ -233,6 +240,8 @@ void focp_c28x_step(uint16_t undervoltage, uint16_t overvoltage, uint16_t freemo
 
     if (++s_div_ms >= STEPS_PER_MS) {
         s_div_ms = 0;
+        ++s_ms;
+        if (tripped && focp_c28x_trip_diag[7] == 0.0f) focp_c28x_trip_diag[7] = (float)s_ms;
         if (s_arm_ms < TRIP_ARM_MS && ++s_arm_ms == TRIP_ARM_MS) {
             /* Start-up trip (seen after every power-up, 2026-11-20): CMPSS3 fires while ISENB
              * settles and the one-shot latch keeps the drive locked, also in potentiometer mode.
@@ -241,6 +250,7 @@ void focp_c28x_step(uint16_t undervoltage, uint16_t overvoltage, uint16_t freemo
                 hal_trip_clear();
                 tripped = 0;
                 ++focp_c28x_boot_trips;
+                focp_c28x_trip_diag[8] = (float)s_ms;
             }
         }
         if (focp_target_tick_1ms() && s_active && s_enabled) { s_comm_fault = 1; s_enabled = 0; }
@@ -279,7 +289,11 @@ void focp_c28x_step(uint16_t undervoltage, uint16_t overvoltage, uint16_t freemo
     hal_tx();
 
     *active = s_active;
-    *freemode = (uint16_t)(s_active && !s_enabled);
+    /* Freemode also while a trip is latched and until the protection is armed: Freemode resets the
+     * speed and current controllers in the model. Without it they wind up while the bridge is tripped
+     * (potentiometer mode) and the start-up clear produced a current step of 27 A (2026-11-20,
+     * matlab/reports/09_Einschalt_Trip_2026-11-20.md). */
+    *freemode = (uint16_t)((s_active && !s_enabled) || tripped || s_arm_ms < TRIP_ARM_MS);
     *speed_ref = ref;
 }
 
@@ -307,6 +321,7 @@ void focp_c28x_isr(const float *iab_pu, float pos_pu, const float *idq_pu, const
     if ((ib < 0.0f ? -ib : ib) > peak) peak = ib < 0.0f ? -ib : ib;
     if ((ic < 0.0f ? -ic : ic) > peak) peak = ic < 0.0f ? -ic : ic;
     s_i_peak = peak;
+    if (!armed && peak > focp_c28x_trip_diag[9]) focp_c28x_trip_diag[9] = peak;
     /* plausibility ia + ib + ic = 0 (only with a measured ic) */
     sum = ia + ib + ic;
     if (sum < 0.0f) sum = -sum;
@@ -321,6 +336,13 @@ void focp_c28x_isr(const float *iab_pu, float pos_pu, const float *idq_pu, const
     if (armed && !hal_trip_active()) {
         if (peak > focp_tune_i_trip) { hal_trip_force(); s_trip_reason = TRIP_SW_OC; }
         else if (s_sum_cnt >= SUM_SAMPLES) { hal_trip_force(); s_trip_reason = TRIP_SUM; }
+        if (hal_trip_active() && focp_c28x_trip_diag[0] == 0.0f) {
+            focp_c28x_trip_diag[0] = (float)s_trip_reason;
+            focp_c28x_trip_diag[1] = (float)s_ms;
+            focp_c28x_trip_diag[2] = ia; focp_c28x_trip_diag[3] = ib; focp_c28x_trip_diag[4] = ic;
+            focp_c28x_trip_diag[5] = s_ic_offset;
+            focp_c28x_trip_diag[6] = (float)s_active;
+        }
     }
     focp_target_set_signal(FOCP_S_IA, ia);
     focp_target_set_signal(FOCP_S_IB, ib);

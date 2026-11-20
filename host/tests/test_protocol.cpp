@@ -264,6 +264,8 @@ static void testC28xGlue()
     focp_c28x_reset();
     // no FOCP traffic: potentiometer mode
     focp_c28x_step(0, 0, 0, 0, 1, 1, 0.0f, 4000.0f, 24.0f, z, 56.0f, 13.856f, 30.0f, 3, 15.0f, 3.0f, &active, &fm, &ref);
+    CHECK(active == 0 && fm == 1);                    // Freemode until the protection is armed (500 ms)
+    for (int i = 0; i < 1000; ++i) focp_c28x_step(0, 0, 0, 0, 1, 1, 0.0f, 4000.0f, 24.0f, z, 56.0f, 13.856f, 30.0f, 3, 15.0f, 3.0f, &active, &fm, &ref);
     CHECK(active == 0 && fm == 0);
     // SET_REF 666 rpm (speedMode 1: span floor(4000/3) = 1333 rpm) -> FOCP mode, Freemode until ENABLE
     focp_msg_t m; uint16_t raw[8];
@@ -378,9 +380,11 @@ static void testC28xGlue()
     focp_c28x_host_cmpss(0);                          // latched, comparator inactive again
     focp_c28x_step(0, 0, 0, 0, 1, 1, 0.0f, 4000.0f, 24.0f, z, 56.0f, 13.856f, 30.0f, 3, 15.0f, 3.0f, &active, &fm, &ref);
     CHECK((statusFaults() & FOCP_FAULT_OC_HW) != 0);  // 125 ms: still latched
+    CHECK(active == 0 && fm == 1);                    // potentiometer mode, Freemode while tripped
     for (int i = 0; i < 4; ++i) statusFaults();       // > 500 ms
     CHECK(statusFaults() == 0);
     CHECK(focp_c28x_boot_trips == 1);
+    CHECK(active == 0 && fm == 0);                    // controllers start from reset
     // comparator still active at arming -> not cleared, and no second automatic clear later
     focp_c28x_reset();
     focp_c28x_host_cmpss(1);
