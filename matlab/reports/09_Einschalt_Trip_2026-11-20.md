@@ -108,3 +108,5 @@ CAN_ERRC 0x000000F8  TEC=248
 - `foc_codegen` erfolgreich, 0 Warnungen. Der erste Lauf brach mit „Modell nach dem Build verändert (Dirty)“ ab. Die Modelle waren unverändert (`git status` leer), der zweite Lauf lief sauber.
 
 **Hardware (nach Flash):** Start mit erst USB, dann Netzteil → STATUS über CAN muss kommen.
+
+**Hardware nach dem Flash (1028821):** Start mit erst USB, dann Netzteil, Poti 0. STATUS über CAN kommt, **READY, kein Fehler**, ohne ACK. Beide Befunde sind damit behoben.
