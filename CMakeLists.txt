@@ -43,6 +43,10 @@ else()
     target_compile_options(fochost PRIVATE -Wall -Wextra)
 endif()
 
+# Command line tool for scripted hardware tests (host/tools/focp_test.cpp)
+add_executable(focp_test host/tools/focp_test.cpp)
+target_link_libraries(focp_test PRIVATE fochost)
+
 # --- GUI -------------------------------------------------------------------------------
 if(FOC_BUILD_GUI)
     add_subdirectory(host/studio)
