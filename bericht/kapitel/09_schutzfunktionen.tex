@@ -1,0 +1,35 @@
+\chapter{Schutz- und Robustheitsfunktionen}
+\label{ch:schutz}
+% Je Abschnitt: Anlass (ggf. Hardwarebefund des Laborpartners), Umsetzung
+% (Skript, Parameter), Nachweis (test_config, Äquivalenz, MIL, Codegen, Hardware)
+
+\section{Begrenzung des Bremsstroms (A2)}
+% ctrl_limits.Iq_min (legacy -0,5 bitgleich, datasheet 0); Rückspeisung ins Labornetzteil
+\offen{Text}
+
+\section{Obergrenze des Drehzahlreglers}
+% ctrl_limits.Iq_max
+\offen{Text}
+
+\section{Rücksetzen der Integratoren im Freemode}
+% Stromstoß -31 A beim Freigeben (Windup), reset_I_cur_freemode, Drehzahlregler-Reset
+\offen{Text, Telemetrie vorher/nachher}
+
+\section{Sollwert-Totzone}
+% Kriechen bei Poti 0, foc_speed_ref_deadband
+\offen{Text}
+
+\section{Eingangsqualifikation der Hall-Signale}
+% 6 Samples, 500 ns (09_Hall_Qualifikation_2026-11-10.md)
+\offen{Text}
+
+\section{ADC-Abtastfenster}
+% 300 ns für Ströme, 1 us für langsame Kanäle; Kalibrierblöcke in focLib
+% (09_ADC_Abtastfenster_2026-11-10.md)
+\offen{Text}
+
+\section{Überspannungsabschaltung}
+% 30 V, Hysterese 1 V, im Input Controller (0,2 s); Fehlerbit im FOCP-STATUS;
+% Udc_max aus FOC Studio änderbar. Einschränkung: kein schneller Schutz (HW19)
+% (09_Ueberspannung_2026-11-20.md)
+\offen{Text}

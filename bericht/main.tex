@@ -1,0 +1,56 @@
+% Projektbericht FOC-Framework – Teil Software
+% Übersetzen: latexmk (siehe .latexmkrc) oder pdflatex -> biber -> pdflatex -> pdflatex
+\documentclass[
+  a4paper,
+  11pt,
+  ngerman,
+  oneside,
+  parskip=half,
+  bibliography=totoc,
+  listof=totoc,
+  numbers=noenddot,
+]{scrreprt}
+
+\input{praeambel}
+
+% ---------------------------------------------------------------
+% Angaben für das Deckblatt (anpassen)
+% ---------------------------------------------------------------
+\newcommand{\berichtTitel}{FOC-Framework für den modularen Frequenzumrichter CarpeDiem}
+\newcommand{\berichtUntertitel}{Teil Software: modellbasierte Weiterentwicklung der Motorregler-Firmware}
+\newcommand{\berichtAutor}{Jan Krüger}
+\newcommand{\berichtPartner}{{Bruno Pesavento} (Teil Hardware)}
+\newcommand{\berichtBetreuer}{Prof. Dr.-Ing. Arno Bergmann}
+\newcommand{\berichtVeranstaltung}{Projektarbeit}
+\newcommand{\berichtDatum}{\offen{Abgabedatum}}
+
+\begin{document}
+
+\pagenumbering{Roman}
+\input{kapitel/00_titelseite}
+\input{kapitel/00_kurzfassung}
+\tableofcontents
+\input{kapitel/00_abkuerzungen}
+
+\cleardoublepage
+\pagenumbering{arabic}
+\input{kapitel/01_einleitung}
+\input{kapitel/02_ausgangslage}
+\input{kapitel/03_vorgehen}
+\input{kapitel/04_bibliothek}
+\input{kapitel/05_regler}
+\input{kapitel/06_verifikation}
+\input{kapitel/07_codegenerierung}
+\input{kapitel/08_kommunikation}
+\input{kapitel/09_schutzfunktionen}
+\input{kapitel/10_focstudio}
+\input{kapitel/11_zusammenfassung}
+
+\printbibliography[heading=bibintoc]
+\listoffigures
+\listoftables
+
+\appendix
+\input{kapitel/A_anhang}
+
+\end{document}

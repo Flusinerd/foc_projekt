@@ -1,0 +1,50 @@
+\chapter{Einleitung}
+\label{ch:einleitung}
+
+\section{Motivation und Aufgabenstellung}
+Grundlage der Projektarbeit ist ein Frequenzumrichter, welcher 2023 von zwei Masterstudent der Hochschule Bochum modellbasiert entwickelt wurde. Initiale Aufgabe war es einen Anwendungsfall für den Frequenzumrichter zu realisieren.
+Nach erster Bestandsaufnahme und Sichtung der Masterarbeiten stand jedoch schnell fest, dass zunächst die Firmware und Hardware überarbeitet werden muss.
+Perspektivisch soll der Frequenzumrichter Firmen als Plattform für ihre eigene Entwicklung bereitgestellt werden können.
+
+Aus dieser neu formulierten Aufgabenstellung heraus wurde das Ziel neu definiert: Ausbau des bestehenden Projekts hin zu einem FOC-Framework bestehend aus:
+
+\begin{itemize}
+	\item Wiederverwendbare C und MatLab Simulink Bibliothek für Anwendungsfälle
+	\item Parametrisierung von Motoren über austauschbare Motorprofile 
+	\item Ausbau der modellbasierten Tests
+	\item Erstellung einer \ac{GUI}-Anwendung für die Inbetriebnahme und Bedienung des Frequenzumrichters über \ac{CAN}
+\end{itemize}
+\offen{Überarbeiten}
+
+\section{Abgrenzung und Aufteilung im Team}
+Dieser Projektbericht umfasst die Softwareseite der Projektarbeit.
+Konkret werden die Themen Modelle, Skripte, Konfugirationen, generierter Code sowie Firmware-Anbindung über das entwickelte \ac{FOCP} und die Software "FOC Studio".
+
+Nicht behandelt wird die Hardware, also Platine, Messungen, Hardware-Review und Befunde und Inbetriebnahme-Messungen.
+% - Dieser Teil: Modelle, Skripte, Konfiguration, generierter Code,
+%   Firmware-Anbindung FOCP, PC-Software FOC Studio
+% - Hardwareteil (Laborpartner): Platine, Messungen, Hardware-Review
+%   (HW-Befunde), Inbetriebnahme-Messungen. Hier nur Verweise darauf.
+\offen{Querverweise, Überarbeiten}
+
+\section{Aufbau des Berichts}
+\offen{Kurzer Überblick über die Kapitel}
+Im Kapitel \ref{ch:ausgangslage} wird zunächst die Ausgangslage, also der vorgefundene Stand der Masterarbeiten von 2023 beschrieben und die Befunde aus der Modellanalyse erläutert.
+
+\ref{ch:vorgehen} stellt die modellbasierte Entwicklung und die verwendeten Werkzeuge vor. Es wird außerdem auf die Konfiguration über Profile und die Versionsverwaltung eingegangen.
+
+Die Überführung des Simulink Modells aus den Masterarbeiten in eine wiederverwendbare Komponentenbibliothek wird in \ref{ch:bibliothek} dargestellt.
+
+Der vorgefundene Regler wies einige Fehler auf. Die Korrektur dieser Befunde behandelt \ref{ch:regler}.
+
+Wie diese Korrekturen durch Model-in-the-Loop-Tests verifiziert wurden ist in \ref{ch:verifikation} beschrieben.
+
+Wie der generierte Quellcode auf die Hardware übertragen wurde und welche Besonderheiten dabei beachtet werden müssen ist in \ref{ch:codegen} festgehalten.
+
+Die Kommunikation mit dem Frequenzumrichter wurde zunächst nur über \ac{CAN} realisiert. Das darunter liegende Protokoll \ac{FOCP} und die aufgetretenen Probleme werden in \ref{ch:kommunikation} diskutiert.
+
+Um den Antrieb gegen Störsignale und kritische Betriebszustände abzusichern, wurden zusätzliche Schutz- und Robustheitsfunktionen ergänzt, darunter eine Begrenzung des Bremsstroms, eine Sollwert-Totzone und eine Überspannungsabschaltung. Diese werden in \ref{ch:schutz} zusammengefasst.
+
+Für die Bedienung des Antriebs am PC wurde die Software FOC Studio entwickelt. \ref{ch:focstudio} dokumentiert ihre Anforderungen, Architektur und Funktionen sowie Test und Auslieferung.
+
+Abschließend zieht \ref{ch:fazit} ein Fazit und benennt die offenen Punkte, die in weiterführenden Arbeiten adressiert werden sollten.

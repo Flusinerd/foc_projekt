@@ -1,0 +1,66 @@
+% ---------------------------------------------------------------
+% Präambel
+% ---------------------------------------------------------------
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}       % ab LaTeX 2018 Standard, schadet nicht
+\usepackage[ngerman]{babel}
+\usepackage{lmodern}
+\usepackage{microtype}
+\usepackage{csquotes}
+
+\usepackage[a4paper, left=30mm, right=25mm, top=25mm, bottom=30mm]{geometry}
+
+% Mathematik, Einheiten
+\usepackage{amsmath, amssymb}
+\usepackage[locale=DE, per-mode=symbol]{siunitx}
+
+% Tabellen, Abbildungen
+\usepackage{graphicx}
+\graphicspath{{img/}{../matlab/reports/img/}{../docs/img/}}
+\usepackage{booktabs}
+\usepackage{tabularx}
+\usepackage{float}
+\usepackage[font=small, labelfont=bf]{caption}
+\usepackage{subcaption}
+
+% Farben, Quelltext
+\usepackage[dvipsnames]{xcolor}
+\usepackage{listings}
+\lstset{
+  basicstyle=\ttfamily\small,
+  breaklines=true,
+  frame=single,
+  numbers=left,
+  numberstyle=\tiny\color{gray},
+  keywordstyle=\color{NavyBlue}\bfseries,
+  commentstyle=\color{ForestGreen},
+  stringstyle=\color{BrickRed},
+  showstringspaces=false,
+  literate={ä}{{\"a}}1 {ö}{{\"o}}1 {ü}{{\"u}}1 {Ä}{{\"A}}1 {Ö}{{\"O}}1 {Ü}{{\"U}}1 {ß}{{\ss}}1,
+}
+\lstdefinestyle{matlab}{language=Matlab}
+\lstdefinestyle{c}{language=C}
+
+% Abkürzungen (printonlyused erst setzen, wenn im Text \ac{...} verwendet wird,
+% sonst bricht die leere Liste die Übersetzung ab)
+\usepackage{acronym}
+
+% Literatur
+\usepackage[backend=biber, style=numeric, sorting=none]{biblatex}
+\addbibresource{literatur.bib}
+
+% Verweise (hyperref zuletzt, cleveref danach)
+\usepackage[hidelinks, pdfusetitle]{hyperref}
+\usepackage[ngerman, noabbrev]{cleveref}
+
+% ---------------------------------------------------------------
+% Eigene Befehle
+% ---------------------------------------------------------------
+% Platzhalter / noch zu schreiben (im PDF rot sichtbar)
+\newcommand{\offen}[1]{\textcolor{red}{[#1]}}
+% Datei-, Skript- und Blocknamen
+\newcommand{\datei}[1]{\texttt{#1}}
+\newcommand{\skript}[1]{\texttt{#1}}
+\newcommand{\block}[1]{\textsf{#1}}
+% Verweis auf den Hardwareteil des Laborpartners
+\newcommand{\hwteil}[1]{(siehe Hardwareteil, #1)}

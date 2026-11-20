@@ -1,0 +1,25 @@
+\chapter{Ausgangslage}
+\label{ch:ausgangslage}
+
+\section{Zielsystem im Überblick}
+% Nur so viel Hardware, wie zum Verständnis der Software nötig ist:
+% TMS320F28386D (C28x, 200 MHz, ext. 25-MHz-Oszillator), DRV8300DIPW-EVM,
+% ECI 63.60 (24 V, 4 Polpaare, Hall). Details im Hardwareteil.
+\offen{Text, ggf.\ Blockbild Signalfluss}
+
+\section{Simulink-Modell der Masterarbeit}
+% impmodel.slx: Struktur (Input Controller, Speed Control, Current Control,
+% Scaling DutyCycles, ...), Parameterdatei params_f2838.mat, Abtastzeiten,
+% vorhandene MIL-Harnesses
+\offen{Text, Abbildung oberste Modellebene}
+
+\section{Befunde aus der Modellanalyse}
+\label{sec:befunde}
+% Tabelle B1-B6 (Quelle: docs/P0_P1_Anleitung.md):
+% B1 I-Anteil Drehzahlregler um Größenordnungen zu klein (Ki doppelt mit Ts)
+% B2 Stromregler: Handkorrektur Kp, I zu klein, Ausgang auf [0,1] begrenzt
+% B3 Motordaten um Faktoren verschoben
+% B4 Strom-Skalierung / PU-Basis
+% B5 dataType fehlt in der .mat-Datei
+% B6 ADC-Referenz 3,36 V statt 3,3 V
+\offen{Tabelle und kurze Erläuterung}

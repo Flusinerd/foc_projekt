@@ -1,0 +1,27 @@
+\chapter{Kommunikation und Diagnose}
+\label{ch:kommunikation}
+
+\section{CAN-Anbindung}
+% eCAN-A GPIO4/5, 1 Mbit/s, Testmodell, Mailboxen (PVDD 0x110, GVDD 0x111)
+\offen{Text}
+
+\section{Protokoll FOCP}
+% Bewusste Ausnahme: handgeschriebener C-Code (firmware/focp_c28x.c) als Custom Code,
+% Entscheidung dokumentiert in 08_FOCP_Einbau_Plan_2026-11-04.md
+% foc_add_focp; INFO/STATUS, Umschaltung Poti/FOC Studio, Sollwerte,
+% RX-FIFO und TX-Mailboxen
+\offen{Text, Nachrichtenübersicht}
+
+\section{Telemetrie und änderbare Parameter}
+% foc_focp_telemetry: 20 kHz, id/iq Ist/Soll, Udc, Hall-Zustand, Temperatur
+% foc_tunable_params: Reglerparameter zur Laufzeit aus FOC Studio
+\offen{Text}
+
+\section{Fehlersuche: Firmware hängt in der Strom-ISR}
+% JTAG-PC-Proben ohne GEL-Reset; Ursache MW_IPC_Write zum CM ohne CM-Programm;
+% foc_remove_ipc_cm (08_Fehler_Firmware_haengt_2026-11-05.md)
+\offen{Text}
+
+\section{Nicht umgesetzt: UART und External Mode}
+% A8 zurückgestellt; Firmware korrekt, Hardwarestrecke offen (Hardwareteil)
+\offen{Text}

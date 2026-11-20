@@ -1,0 +1,30 @@
+\chapter{Korrektur der Regler}
+\label{ch:regler}
+
+\section{Reglerauslegung}
+% foc_design_controllers, PU-Basis = im Modell wirksame Basis (B4), Profil datasheet
+\offen{Text, Auslegungsformeln}
+
+\section{Stromregler und Drehzahlregler (P1b)}
+% foc_apply_fixes('current_pi') / ('speed_pi'): UseKiTs off, I in 1/s,
+% symmetrische Ausgangsbegrenzung; Läufe A/B/C mit foc_run_p1b
+\offen{Text, Kennzahlentabelle}
+
+\section{Diagnose des Grenzzyklus}
+% P1b formal erfüllt, aber Dauerschwingung: mitgekoppelter Stromkreis.
+% Ursache: fehlende CSA-Polarität im Sensormodell (foc_fix_sim_sensor).
+% Bericht 05_P1b_Diagnose_2026-11-03.md
+\offen{Text, Plots vorher/nachher}
+
+\section{Ergebnis mit korrigierter Messkette (P1b.1)}
+% Strommessung nach SLVUBV6/SLVC817: 3 mOhm x 9,98 V/V, Offset 1,65 V,
+% invertingAmp = -1, 1 PU = 56 A
+\offen{Text, Plots P1b A/B/C}
+
+% Beispiel für eine Abbildung aus matlab/reports/img:
+% \begin{figure}[htbp]
+%   \centering
+%   \includegraphics[width=\linewidth]{P1b_C}
+%   \caption{Lauf C: Drehzahl, $i_q$ und $V_d$}
+%   \label{fig:p1b_c}
+% \end{figure}
