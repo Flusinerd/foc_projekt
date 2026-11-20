@@ -50,21 +50,62 @@ static void hal_tx(void)
         s_tx_next = (obj == OBJ_TX_LAST) ? OBJ_TX_FIRST : (uint16_t)(obj + 1u);
     }
 }
+
+/* Overcurrent trip on the three ePWMs of the power stage (6, 7, 8). The one-shot trip is set by
+ * CMPSS3 (I_B, via ePWM X-BAR TRIP4 -> DCAEVT1, configured in the model) or by
+ * focp_c28x_isr (software, I_A/I_B/I_C). Trip action A low / B high (DRV8300DI: INL inverted). */
+static const uint32_t s_epwm[3] = {EPWM6_BASE, EPWM7_BASE, EPWM8_BASE};
+
+static void hal_trip_force(void)
+{
+    uint16_t k;
+    for (k = 0; k < 3u; ++k) EPWM_forceTripZoneEvent(s_epwm[k], EPWM_TZ_FORCE_EVENT_OST);
+}
+
+static uint16_t hal_trip_active(void)
+{
+    return (uint16_t)((EPWM_getTripZoneFlagStatus(EPWM6_BASE) & EPWM_TZ_FLAG_OST) != 0u);
+}
+
+static uint16_t hal_cmpss_active(void)
+{
+    return (uint16_t)((CMPSS_getStatus(CMPSS3_BASE) & (CMPSS_STS_HI_FILTOUT | CMPSS_STS_LO_FILTOUT)) != 0u);
+}
+
+static void hal_trip_clear(void)
+{
+    uint16_t k;
+    for (k = 0; k < 3u; ++k) {
+        EPWM_clearOneShotTripZoneFlag(s_epwm[k], EPWM_TZ_OST_FLAG_DCAEVT1);
+        EPWM_clearTripZoneFlag(s_epwm[k], EPWM_TZ_INTERRUPT | EPWM_TZ_FLAG_OST | EPWM_TZ_FLAG_DCAEVT1);
+    }
+}
 #else
-/* Host build (tests): no CAN hardware, frames go through focp_target_rx_can/tx_pop directly. */
+/* Host build (tests): no CAN hardware, frames go through focp_target_rx_can/tx_pop directly.
+ * The trip is simulated by a flag; focp_c28x_host_cmpss() emulates the comparator. */
+static uint16_t s_host_trip, s_host_cmpss;
 static void hal_init(void) {}
 static void hal_rx(void) {}
 static void hal_tx(void) {}
+static void hal_trip_force(void) { s_host_trip = 1; }
+static uint16_t hal_trip_active(void) { return (uint16_t)(s_host_trip || s_host_cmpss); }
+static uint16_t hal_cmpss_active(void) { return s_host_cmpss; }
+static void hal_trip_clear(void) { s_host_trip = 0; }
+void focp_c28x_host_cmpss(uint16_t on) { s_host_cmpss = on; if (on) s_host_trip = 1; }
 #endif
 
 #define STEPS_PER_MS     2u       /* Ts_speed = 0.5 ms */
 #define STATUS_PERIOD_MS 100u
 #define TELEM_BASE_HZ    20000.0f /* focp_c28x_isr runs in the current ISR (PWM frequency) */
-#define N_TUNE           7u
+#define N_TUNE           8u
+#define TRIP_ARM_MS      500u     /* software overcurrent armed after the ADC offset calibration */
 
 static uint16_t s_init, s_active, s_enabled, s_comm_fault, s_div_ms, s_ms_status;
 static uint32_t s_rx_seen;
 static float s_i_base = 1.0f, s_v_base = 1.0f, s_n_base = 1.0f;
+static uint16_t s_arm_ms;                       /* ms since start, up to TRIP_ARM_MS */
+static volatile uint16_t s_sw_trip;             /* last trip came from the software check */
+static volatile float s_i_peak;                 /* largest |phase current| of the last ISR sample (A) */
 
 /* Tunable controller parameters in PU. On the target they are ExportedGlobal parameters of the
  * model (matlab/tools/foc_focp_tunable.m); on the host they live here for the tests. */
@@ -72,13 +113,16 @@ static float s_i_base = 1.0f, s_v_base = 1.0f, s_n_base = 1.0f;
 float focp_tune_cur_Kp, focp_tune_cur_Ki, focp_tune_spd_Kp, focp_tune_spd_Ki, focp_tune_iq_max, focp_tune_iq_min;
 float focp_tune_udc_max;
 #endif
+/* Software overcurrent threshold (A): owned by this file, default from the model (ctrl_limits.I_trip)
+ * on the first step, changed by FOC Studio via inv.I_max. */
+float focp_tune_i_trip;
 
 /* Values compiled into the firmware. LOAD_DEFAULTS restores these and not the table defaults,
  * whose spd.Iq_min = -5 A would brake into a lab supply. */
 static float s_def[N_TUNE];
 static const uint16_t s_tune_param[N_TUNE] = {FOCP_P_CUR_KP, FOCP_P_CUR_KI, FOCP_P_SPD_KP,
                                               FOCP_P_SPD_KI, FOCP_P_SPD_IQ_MAX, FOCP_P_SPD_IQ_MIN,
-                                              FOCP_P_INV_UDC_MAX};
+                                              FOCP_P_INV_UDC_MAX, FOCP_P_INV_I_MAX};
 
 static float *tune_var(uint16_t k)
 {
@@ -89,12 +133,13 @@ static float *tune_var(uint16_t k)
     case 3: return &focp_tune_spd_Ki;
     case 4: return &focp_tune_iq_max;
     case 5: return &focp_tune_iq_min;
-    default: return &focp_tune_udc_max;
+    case 6: return &focp_tune_udc_max;
+    default: return &focp_tune_i_trip;
     }
 }
 
 /* SI value = model value * factor: current loop V/A, speed loop A/rpm, current limits A,
- * Udc_max is already in V */
+ * Udc_max (V) and the software overcurrent threshold (A) are already in SI */
 static float tune_factor(uint16_t k)
 {
     if (k < 2u) return s_v_base / s_i_base;
@@ -127,14 +172,16 @@ void focp_c28x_reset(void) { s_init = 0; }
 void focp_c28x_step(uint16_t undervoltage, uint16_t overvoltage, uint16_t freemode_can, uint16_t hot_temp,
                     uint16_t safe_state, uint16_t speed_mode, float speed_pu, float n_base,
                     float udc, const float *idq_ref_pu, float i_base, float v_base,
-                    float temp, uint16_t hall_state, uint16_t *active, uint16_t *freemode, float *speed_ref)
+                    float temp, uint16_t hall_state, float i_trip, uint16_t *active, uint16_t *freemode,
+                    float *speed_ref)
 {
     float arg, span, ref;
-    uint16_t cmd, faults, fm, k;
+    uint16_t cmd, faults, fm, k, tripped;
 
     s_i_base = i_base; s_v_base = v_base; s_n_base = n_base;
     if (!s_init) {
         focp_target_init(FOCP_C28X_NODE);
+        focp_tune_i_trip = i_trip;
         focp_target_param_set(FOCP_P_COMM_TELEM_F, TELEM_BASE_HZ);
         for (k = 0; k < N_TUNE; ++k) s_def[k] = *tune_var(k);
         publish_tunables();                     /* FOC Studio shows what the firmware really uses */
@@ -143,6 +190,8 @@ void focp_c28x_step(uint16_t undervoltage, uint16_t overvoltage, uint16_t freemo
         s_active = s_enabled = s_comm_fault = 0;
         s_div_ms = s_ms_status = 0;
         s_rx_seen = 0;
+        s_arm_ms = 0;
+        s_sw_trip = 0;
         s_init = 1;                             /* last: enables focp_c28x_isr */
     }
 
@@ -151,14 +200,26 @@ void focp_c28x_step(uint16_t undervoltage, uint16_t overvoltage, uint16_t freemo
         s_rx_seen = focp_target_rx_count();
         s_active = 1;
     }
+    /* Overcurrent trip (latched by the ePWM one-shot trip): no enable until acknowledged.
+     * ACK_FAULT clears it only when the comparator and the measured currents are below threshold. */
+    tripped = hal_trip_active();
+    if (tripped) s_enabled = 0;
     while ((cmd = focp_target_cmd_take(&arg)) != 0u) {
-        if (cmd == FOCP_CMD_ENABLE && !s_comm_fault) s_enabled = 1;
+        if (cmd == FOCP_CMD_ENABLE && !s_comm_fault && !tripped) s_enabled = 1;
         else if (cmd == FOCP_CMD_DISABLE) s_enabled = 0;
-        else if (cmd == FOCP_CMD_ACK_FAULT) s_comm_fault = 0;
+        else if (cmd == FOCP_CMD_ACK_FAULT) {
+            s_comm_fault = 0;
+            if (tripped && !hal_cmpss_active() && s_i_peak < focp_tune_i_trip) {
+                hal_trip_clear();
+                s_sw_trip = 0;
+                tripped = 0;
+            }
+        }
     }
 
     if (++s_div_ms >= STEPS_PER_MS) {
         s_div_ms = 0;
+        if (s_arm_ms < TRIP_ARM_MS) ++s_arm_ms;
         if (focp_target_tick_1ms() && s_active && s_enabled) { s_comm_fault = 1; s_enabled = 0; }
         if (++s_ms_status >= STATUS_PERIOD_MS) {
             s_ms_status = 0;
@@ -168,8 +229,9 @@ void focp_c28x_step(uint16_t undervoltage, uint16_t overvoltage, uint16_t freemo
             if (hot_temp) faults |= FOCP_FAULT_OVERTEMP;
             if (!safe_state) faults |= FOCP_FAULT_SAFE_INPUT;
             if (s_comm_fault) faults |= FOCP_FAULT_COMM;
+            if (tripped) faults |= s_sw_trip ? FOCP_FAULT_OC_SW : FOCP_FAULT_OC_HW;
             fm = (uint16_t)(undervoltage || overvoltage || freemode_can || hot_temp || !safe_state || (s_active && !s_enabled));
-            focp_target_status(s_comm_fault ? FOCP_ST_FAULT : (fm ? FOCP_ST_READY : FOCP_ST_RUN),
+            focp_target_status((s_comm_fault || tripped) ? FOCP_ST_FAULT : (fm ? FOCP_ST_READY : FOCP_ST_RUN),
                                FOCP_MODE_SPEED, FOCP_SENS_HALL, faults, udc, temp);
         }
     }
@@ -198,10 +260,23 @@ void focp_c28x_step(uint16_t undervoltage, uint16_t overvoltage, uint16_t freemo
 
 void focp_c28x_isr(const float *iab_pu, float pos_pu, const float *idq_pu, const float *vdq_pu)
 {
+    float ia, ib, ic, peak;
     if (!s_init) return;                        /* bases and protocol are set up by the speed task */
-    focp_target_set_signal(FOCP_S_IA, iab_pu[0] * s_i_base);
-    focp_target_set_signal(FOCP_S_IB, iab_pu[1] * s_i_base);
-    focp_target_set_signal(FOCP_S_IC, -(iab_pu[0] + iab_pu[1]) * s_i_base);
+    ia = iab_pu[0] * s_i_base;
+    ib = iab_pu[1] * s_i_base;
+    ic = -(ia + ib);
+    peak = ia < 0.0f ? -ia : ia;
+    if ((ib < 0.0f ? -ib : ib) > peak) peak = ib < 0.0f ? -ib : ib;
+    if ((ic < 0.0f ? -ic : ic) > peak) peak = ic < 0.0f ? -ic : ic;
+    s_i_peak = peak;
+    /* software overcurrent (I_A and I_C have no comparator, HW16); same latch as the CMPSS trip */
+    if (s_arm_ms >= TRIP_ARM_MS && peak > focp_tune_i_trip && !hal_trip_active()) {
+        hal_trip_force();
+        s_sw_trip = 1;
+    }
+    focp_target_set_signal(FOCP_S_IA, ia);
+    focp_target_set_signal(FOCP_S_IB, ib);
+    focp_target_set_signal(FOCP_S_IC, ic);
     focp_target_set_signal(FOCP_S_ID, idq_pu[0] * s_i_base);
     focp_target_set_signal(FOCP_S_IQ, idq_pu[1] * s_i_base);
     focp_target_set_signal(FOCP_S_UD, vdq_pu[0] * s_v_base);

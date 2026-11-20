@@ -66,6 +66,14 @@ end
 % Freemode ab Udc_max, frei wieder unter Udc_max - Udc_hyst. ov_enable: legacy 0 (bitgleich).
 v.ctrl_limits.Udc_max = 30;
 v.ctrl_limits.Udc_hyst = 1;
+% I_trip: Ueberstromschwelle je Phase in A (Hardware-Review HW16, A4). Hardware: CMPSS3 auf I_B
+% (ADCINB2) mit DAC-Schwellen um den Nullpunkt (2048 Counts), beide Richtungen, -> ePWM-Trip-Zone.
+% Software: |ia|,|ib|,|ic| > I_trip im Strom-ISR (firmware/focp_c28x.c). DAC-Referenz = VDDA = ADC_Vref.
+v.ctrl_limits.I_trip = 15;
+dac_span = v.ctrl_limits.I_trip * abs(v.inverter_DRV8300.ISenseVoltPerAmp) * ...
+    (v.target_f2838.ADC_MaxCount + 1) / v.target_f2838.ADC_Vref;
+v.ctrl_limits.cmpss_dac_hi = round((v.target_f2838.ADC_MaxCount + 1) / 2 + dac_span);
+v.ctrl_limits.cmpss_dac_lo = round((v.target_f2838.ADC_MaxCount + 1) / 2 - dac_span);
 switch lower(profile)
     case 'legacy_f2838'
         v.ctrl_limits.Iq_min = -0.5;

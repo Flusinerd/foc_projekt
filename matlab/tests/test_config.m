@@ -61,6 +61,10 @@ nfail = nfail + check('datasheet: focp_tune_iq_max', c.vars.focp_tune_iq_max, c.
 nfail = nfail + check('datasheet: ctrl_limits.ov_enable', c.vars.ctrl_limits.ov_enable, 1, 0);
 nfail = nfail + check('datasheet: focp_tune_udc_max [V]', c.vars.focp_tune_udc_max, 30, 0);
 nfail = nfail + check('Ueberspannung Hysterese [V]', c.vars.ctrl_limits.Udc_hyst, 1, 0);
+% CMPSS3-Schwellen fuer 15 A: 2048 +- 15 A * 0,03 V/A * 4096 / 3,36 V = 2048 +- 548,6
+nfail = nfail + check('datasheet: CMPSS DAC hoch', c.vars.ctrl_limits.cmpss_dac_hi, 2597, 0);
+nfail = nfail + check('datasheet: CMPSS DAC tief', c.vars.ctrl_limits.cmpss_dac_lo, 1499, 0);
+nfail = nfail + check('datasheet: ctrl_limits.I_trip [A]', c.vars.ctrl_limits.I_trip, 15, 0);
 % FOCP-Tabellenwerte (SI) = Auslegung (PU): cur.Kp in V/A, spd.Kp in A/rpm
 nfail = nfail + check('cur.Kp SI [V/A]', p.Kp_i * pu.V_base / pu.I_base, 0.255, 0.001);
 nfail = nfail + check('spd.Kp SI [A/rpm]', p.Kp_speed * pu.I_base / pu.N_base, 0.0053, 0.0001);
@@ -89,7 +93,8 @@ need = {'pmsm_ECI6360.p','pmsm_ECI6360.Rs','pmsm_ECI6360.Ld','pmsm_ECI6360.Lq','
     'PI_params.Ki_d_texas','PI_params.Kp_speed','PI_params.Ki_speed_texas','PI_params.Ki_speed', ...
     'T_pwm','Ts','Ts_inverter','Ts_motor','Ts_simulink','Ts_speed','availableSpeedModes','dataType', ...
     'ctrl_limits.Iq_min', 'ctrl_limits.Iq_max', 'ctrl_limits.reset_I_freemode', 'ctrl_limits.reset_I_cur_freemode', 'ctrl_limits.N_ref_min', ...
-    'focp_tune_cur_Kp', 'focp_tune_cur_Ki', 'focp_tune_spd_Kp', 'focp_tune_spd_Ki', 'focp_tune_iq_max', 'focp_tune_iq_min', 'focp_tune_udc_max', 'ctrl_limits.Udc_hyst', 'ctrl_limits.ov_enable'};
+    'focp_tune_cur_Kp', 'focp_tune_cur_Ki', 'focp_tune_spd_Kp', 'focp_tune_spd_Ki', 'focp_tune_iq_max', 'focp_tune_iq_min', 'focp_tune_udc_max', 'ctrl_limits.Udc_hyst', 'ctrl_limits.ov_enable', ...
+    'ctrl_limits.I_trip', 'ctrl_limits.cmpss_dac_hi', 'ctrl_limits.cmpss_dac_lo'};
 for prof = {'legacy_f2838', 'datasheet'}
     v = foc_config(prof{1}).vars;
     for k = 1:numel(need)
