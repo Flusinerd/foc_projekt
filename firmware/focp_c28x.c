@@ -18,6 +18,14 @@ static uint16_t s_tx_next = OBJ_TX_FIRST;
 static void hal_init(void)
 {
     uint32_t obj;
+    /* Bus-off recovery (2026-11-20): when the board is powered from USB before PVDD, the CAN
+     * transceiver is not yet supplied, every frame fails (LEC = bit-0 error, TEC -> 255) and the
+     * module stays bus-off with Init = 1, because the blockset does not enable Auto-Bus-On.
+     * Auto-Bus-On restarts the module 10 ms after each bus-off; a bus-off that happened before
+     * this point is ended here once. */
+    CAN_setAutoBusOnTime(CAN_BASE, 2000000UL);        /* 10 ms at 200 MHz */
+    CAN_enableAutoBusOn(CAN_BASE);
+    if (CAN_getStatus(CAN_BASE) & CAN_STATUS_BUS_OFF) CAN_startModule(CAN_BASE);
     /* FIFO over 17..31: ID 0x2?1 with bit 4 free -> 0x201 (CMD) and 0x211 (PARAM_REQ), node 1 */
     for (obj = OBJ_RX_FIRST; obj <= OBJ_RX_LAST; ++obj)
         CAN_setupMessageObject(CAN_BASE, obj, 0x201u, CAN_MSG_FRAME_STD, CAN_MSG_OBJ_TYPE_RX, 0x7EFu,

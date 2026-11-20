@@ -77,3 +77,34 @@ Damit startet der Antrieb nach dem Löschen aus zurückgesetzten Reglern. Ein Tr
 Die Diagnosevariablen bleiben in der Firmware: 20 Wörter RAM, Schreiben nur beim ersten Trip.
 
 **Hardware (nach Flash):** mehrere Neustarts in beiden Einschaltreihenfolgen. Erwartet: READY ohne Fehler, `diag[0]` = 0, `boot_trips` = 1.
+
+## Hardware nach dem Flash (31131a0)
+
+| Start | Reihenfolge | Status über CAN | Diagnose (JTAG) |
+|---|---|---|---|
+| 1 | erst Netzteil, dann USB | **READY, kein Fehler** (ohne ACK) | `boot_trips` 1, HW-Trip 1 ms → gelöscht 500 ms, `diag[0]` 0 (kein SW-Trip), max \|i\| 0,63 A |
+| 2 | erst USB, dann Netzteil | **kein Rahmen auf dem Bus** | `boot_trips` 1, `diag[0]` 0, max \|i\| 0,41 A |
+
+Die Trip-Behebung wirkt in beiden Reihenfolgen.
+
+## Zweiter Befund: CAN bleibt nach dem Start mit USB zuerst im Bus-Off
+
+JTAG ohne Reset (`host/tools/ccs_read_can_noreset.js`) nach Start 2:
+
+```
+CAN_CTL  0x00011441  Init=1 ABO=0
+CAN_ES   0x000000E5  LEC=5 (Bit-0-Fehler) EPass=1 EWarn=1 BOff=1
+CAN_ERRC 0x000000F8  TEC=248
+```
+
+**Mechanismus:**
+- Über USB läuft der Controller schon, bevor PVDD da ist. Der CAN-Transceiver ist dann vermutlich noch nicht versorgt, und jeder Sendeversuch scheitert.
+- Das Modul geht in Bus-Off. Das Blockset schaltet Auto-Bus-On nicht ein (keine Option in den Hardware-Einstellungen), deshalb bleibt das Modul bis zum Neustart im Init.
+- Das erklärt auch die früheren „stummen“ Starts. Ich hatte sie vorher dem JTAG-Zugriff zugeschrieben.
+
+**Behebung (`hal_init` in `firmware/focp_c28x.c`):**
+- Auto-Bus-On mit 10 ms Wartezeit einschalten (`CAN_enableAutoBusOn`, `CAN_setAutoBusOnTime`).
+- Einen schon bestehenden Bus-Off einmal mit `CAN_startModule` beenden.
+- `foc_codegen` erfolgreich, 0 Warnungen. Der erste Lauf brach mit „Modell nach dem Build verändert (Dirty)“ ab. Die Modelle waren unverändert (`git status` leer), der zweite Lauf lief sauber.
+
+**Hardware (nach Flash):** Start mit erst USB, dann Netzteil → STATUS über CAN muss kommen.
