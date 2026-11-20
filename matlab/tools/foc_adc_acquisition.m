@@ -7,7 +7,7 @@ function foc_adc_acquisition()
 %     Stroeme (Messung SOC0/1 und Offsetkalibrierung SOC2/3):  target_f2838.adc_acq_cur_ns
 %     PVDD, GVDD, Temperatur, Poti:                            target_f2838.adc_acq_slow_ns
 %   Bisher 65 ns (Strommessung), 75 ns (Kalibrierung), 35..75 ns (langsame Kanaele).
-%   Bloecke in focLib (Input/Torque Controller) und in app_speed (ADC Offset Function).
+%   Alle Bloecke liegen in focLib (Input/Torque Controller, ADC Offset Function).
 %   Nur Codegenerierung. Vorher/nachher werden ausgegeben; Modelle werden gespeichert.
 
 root = fileparts(fileparts(mfilename('fullpath')));
@@ -23,8 +23,8 @@ bv = find_system([ic '/BatteryVoltage_CodeGen'], 'LookUnderMasks', 'all', 'Refer
 blocks = {
     [lib '/Torque Controller/Iab_Meas_ADC/ADC'], cur
     [lib '/Torque Controller/Iab_Meas_ADC/ADC1'], cur
-    [app '/ADC Offset Function/Calculate ADC Offset /For Iterator Subsystem/ADC_B_IN0'], cur
-    [app '/ADC Offset Function/Calculate ADC Offset /For Iterator Subsystem/ADC_B_IN2'], cur
+    [lib '/ADC Offset Function/Calculate ADC Offset /For Iterator Subsystem/ADC_B_IN0'], cur
+    [lib '/ADC Offset Function/Calculate ADC Offset /For Iterator Subsystem/ADC_B_IN2'], cur
     [ic '/GVDD_Calculation/ADC'], slow
     [ic '/SpeedCommand_CodeGen/ADC1'], slow
     [ic '/Subsystem/ADC1'], slow
@@ -38,9 +38,15 @@ for k = 1:size(blocks, 1)
         get_param(blk, 'SOCAcquisitionWindow'), num2str(str2double(blocks{k, 2}) * 1e9 / b.CPU_frequency));
 end
 save_system(lib);
-close_system(app, 0);                         % Bibliotheksverknuepfungen neu laden, Root-Bloecke erneut setzen
+% Die Kalibrierbloecke liegen in focLib/ADC Offset Function. Fruehere Fassung dieses Skripts hatte
+% sie an der Verknuepfung in app_speed gesetzt (parametrierte Bibliotheksverknuepfung) - verwerfen.
+close_system(app, 0);
 load_system(fullfile(root, 'models', [app '.slx']));
-for k = 3:4, set_param(blocks{k, 1}, 'SOCAcquisitionWindow', blocks{k, 2}); end
+lnk = [app '/ADC Offset Function'];
+if ~isempty(get_param(lnk, 'LinkData'))
+    fprintf('%s: lokale Parameter verworfen (LinkData)\n', lnk);
+    set_param(lnk, 'LinkData', []);
+end
 save_system(app);
 fprintf('%s und %s gespeichert.\n', lib, app);
 end

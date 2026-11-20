@@ -40,3 +40,7 @@ Neu: `tools/foc_eval_scope_csv.m`, wertet FOC-Studio-CSV aus (Drehzahlsprünge, 
 | Hall-Lauf 1000 rpm | 100 s (Pufferende), 37 543 Wechsel, **0 Sprünge, 0 unzulässige Übergänge**, ab t = 182 s Stillstand | `Hall.csv` |
 
 Einschränkung: `Strommessung.csv` hat 16 110 Lücken (4 Signale × Teiler 6 ≈ 6700 CAN-Rahmen/s, Bus überlastet). Die Std ist verwertbar, die FFT nicht. Für die Nachher-Messung dieselben Einstellungen wählen und zusätzlich eine Aufnahme mit nur `ia` (Teiler 10, 1 Rahmen/Abtastung) machen, für eine lückenlose FFT.
+
+## Korrektur (2026-11-20)
+
+Die erste Fassung von `foc_adc_acquisition.m` hat die Kalibrierblöcke `ADC_B_IN0/ADC_B_IN2` an der Verknüpfung `app_speed/ADC Offset Function` geändert. Der Block ist eine Bibliotheksverknüpfung auf `focLib/ADC Offset Function`. Folge: eine **parametrierte Bibliotheksverknüpfung**; Simulink warnte beim Speichern in Schritt C. Das Skript setzt die Werte jetzt in `focLib` und verwirft die lokalen Parameter (`LinkData`). Danach gibt es 0 parametrierte Verknüpfungen in `app_speed`, und der Code ist unverändert (ACQPS 59/199, 0 Warnungen).
