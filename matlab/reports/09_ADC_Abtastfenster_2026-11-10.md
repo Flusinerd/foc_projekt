@@ -44,3 +44,17 @@ Einschränkung: `Strommessung.csv` hat 16 110 Lücken (4 Signale × Teiler 6 ≈
 ## Korrektur (2026-11-20)
 
 Die erste Fassung von `foc_adc_acquisition.m` hat die Kalibrierblöcke `ADC_B_IN0/ADC_B_IN2` an der Verknüpfung `app_speed/ADC Offset Function` geändert. Der Block ist eine Bibliotheksverknüpfung auf `focLib/ADC Offset Function`. Folge: eine **parametrierte Bibliotheksverknüpfung**; Simulink warnte beim Speichern in Schritt C. Das Skript setzt die Werte jetzt in `focLib` und verwirft die lokalen Parameter (`LinkData`). Danach gibt es 0 parametrierte Verknüpfungen in `app_speed`, und der Code ist unverändert (ACQPS 59/199, 0 Warnungen).
+
+## Nachher-Messung (2026-11-20, Stand 9192bfe, `focp_test record`)
+
+| Größe | vorher | nachher |
+|---|---|---|
+| Strom-Std im Stillstand ia / ib | 0,127 / 0,139 A | 0,140 / 0,144 A (`data/09_E_Stillstand.csv`, gleiche Einstellungen) |
+| ic | 0,212 A (aus −(ia+ib) gerechnet) | 0,154 A (gemessen, Schritt E) |
+| FFT nur ia, 2 kHz, keine Lücken | – | keine ausgeprägte Linie, breites Rauschen ≈ 8 mA je Linie (`img/09_Strom_nachher_ia.png`). Die vermutete Linie bei ≈ 870 Hz ist nicht vorhanden |
+| PVDD Firmware / Klemmen | 24,4 V / 23,95 V | 31,31 V / 30,98 V (Überspannungstest) |
+
+Bewertung:
+- Das längere Abtastfenster verringert das Rauschen nicht messbar. Das Rauschen stammt offenbar aus der Messkette (Verstärker, Referenz), nicht aus einer unvollständigen Aufladung des Abtastkondensators.
+- Die Änderung bleibt trotzdem: Die Fenster entsprechen jetzt dem Datenblatt, vorher lagen PVDD, GVDD und Poti unter dem Mindestwert.
+- Die PVDD-Messung liegt um ≈ +0,35 V daneben, unverändert gegenüber vorher.

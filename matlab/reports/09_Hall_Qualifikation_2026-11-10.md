@@ -18,3 +18,17 @@ Störimpulse kürzer als 5 × 100 ns = **500 ns** werden verworfen. Bei 6000 rpm
 - Die Simulation ist nicht betroffen (nur Hardware-Einstellungen).
 
 **Hardware:** noch offen (Flash 1). Messung: 10 min bei 1000 und 2000 rpm, Sprünge > 1,3 × Mittelwert und ungültige Hall-Folgen zählen.
+
+## Hardware (2026-11-20, Stand 9192bfe)
+
+Lauf mit 1000 rpm, 60 s, 2 kHz Telemetrie ohne Lücken (`data/09_E_Lauf1000.csv`):
+
+| Größe | Ergebnis |
+|---|---|
+| Drehzahl (t = 3–60 s) | Mittel 1000,0 rpm, Std 13,5 rpm, 964–1030 rpm |
+| Sprünge > 1,3 × Median | **0** |
+| Hall | 24 099 Wechsel, 0 ungültige Zustände. 1 unzulässiger Übergang (3→5) bei t = 0,34 s, im ersten Ruck des Anlaufs aus dem Stand, im Lauf keiner |
+
+Noch offen:
+- 10-min-Lauf bei 1000 und 2000 rpm für Zielkriterium 2. Der frühere Stand lag bei 1 Sprung je ≈ 54 s.
+- Mit 60 s ohne Sprung ist eine Verbesserung wahrscheinlich, aber statistisch noch nicht belegt.

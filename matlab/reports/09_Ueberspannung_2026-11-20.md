@@ -30,4 +30,18 @@ Ausgabe `foc_overvoltage` (Log `09_overvoltage.log`):
 
 **Einschränkung:** Der Input Controller läuft mit 0,2 s. Gegen Rückspeisung reicht das, solange `Iq_min = 0` gilt (kein Bremsen). Einen schnellen Schutz kann nur die Hardware bieten (HW19).
 
-**Hardware:** noch offen. Motor steht, PVDD 24 → 31 V: Freemode und „Überspannung“ in FOC Studio; bei 28,5 V wieder bereit.
+## Hardware (2026-11-20, Stand 9192bfe)
+
+Ablauf: Motor steht, nicht freigegeben. Der Mensch dreht PVDD von 24 V langsam auf 31 V, hält dort 10 s, fährt auf 28,5 V herunter und zurück auf 24 V. Mitgeschrieben hat `focp_test watch 300` (STATUS alle 0,5 s). Protokoll: `data/09_C_Ueberspannung_watch.txt`.
+
+| Ereignis | Udc, Firmware | Bemerkung |
+|---|---|---|
+| Fehler „Überspannung“ gesetzt (t = 114,0 s) | 30,09 V (vorher 29,87 V) | Schwelle 30 V |
+| Haltephase 31 V | Mittel 31,31 V, max. 31,87 V | Netzteil 31 V, an den Klemmen 30,98 V (Multimeter) |
+| Fehler zurückgesetzt (t = 163,8 s) | 29,15 V (vorher 29,24 V) | Schwelle 29 V (1 V Hysterese) |
+
+**Bewertung:**
+- Die Abschaltung setzt bei der eingestellten Schwelle, die Hysterese wirkt, und die Rückkehr erfolgt selbstständig. Der Antrieb blieb dabei im Zustand READY mit gesetztem Fehlerbit 0x0008; der Motor war nicht freigegeben.
+- Die Firmware misst ≈ 0,33 V zu viel (31,31 V gegen 30,98 V an den Klemmen; am 2026-11-10: 24,4 V gegen 23,95 V). Die Schwelle 30 V entspricht an den Klemmen also ≈ 29,7 V. Das liegt auf der sicheren Seite.
+- Udc schwankt in der Haltephase um ±0,5 V. Die Hysterese von 1 V verhindert Flattern.
+- **Nicht geprüft:** Abschaltung während eines Laufs. Bewusst nicht gemacht: Rückspeisung kann das Labornetzteil nicht aufnehmen, und bei laufendem Motor wäre ein Spannungssprung auf 31 V nicht unter Kontrolle.
