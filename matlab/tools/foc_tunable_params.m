@@ -10,7 +10,7 @@ function foc_tunable_params()
 %   foc_flash.
 
 names = {'focp_tune_cur_Kp', 'focp_tune_cur_Ki', 'focp_tune_spd_Kp', 'focp_tune_spd_Ki', ...
-         'focp_tune_iq_max', 'focp_tune_iq_min'};
+         'focp_tune_iq_max', 'focp_tune_iq_min', 'focp_tune_udc_max'};
 for k = 1:numel(names)
     v = evalin('base', names{k});
     if isa(v, 'Simulink.Parameter'), continue; end

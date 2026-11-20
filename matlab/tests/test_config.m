@@ -22,12 +22,13 @@ for k = 1:numel(names)
     end
     nfail = nfail + compare(n, ref.(n), cfg.vars.(n));
 end
-tune = {'focp_tune_cur_Kp'; 'focp_tune_cur_Ki'; 'focp_tune_spd_Kp'; 'focp_tune_spd_Ki'; 'focp_tune_iq_max'; 'focp_tune_iq_min'};
+tune = {'focp_tune_cur_Kp'; 'focp_tune_cur_Ki'; 'focp_tune_spd_Kp'; 'focp_tune_spd_Ki'; 'focp_tune_iq_max'; 'focp_tune_iq_min'; 'focp_tune_udc_max'};
 extra = setdiff(fieldnames(cfg.vars), [names; {'dataType'; 'ctrl_limits'}; tune]);
 nfail = nfail + check('legacy: ctrl_limits.Iq_min', cfg.vars.ctrl_limits.Iq_min, -0.5, 0);
 nfail = nfail + check('legacy: ctrl_limits.reset_I_freemode', cfg.vars.ctrl_limits.reset_I_freemode, 0, 0);
 nfail = nfail + check('legacy: ctrl_limits.reset_I_cur_freemode', cfg.vars.ctrl_limits.reset_I_cur_freemode, 0, 0);
 nfail = nfail + check('legacy: ctrl_limits.N_ref_min', cfg.vars.ctrl_limits.N_ref_min, 0, 0);
+nfail = nfail + check('legacy: ctrl_limits.ov_enable (aus)', cfg.vars.ctrl_limits.ov_enable, 0, 0);
 nfail = nfail + check('legacy: ctrl_limits.Iq_max', cfg.vars.ctrl_limits.Iq_max, 1, 0);
 if ~isempty(extra)
     fprintf('FAIL  legacy: zusaetzliche Variablen %s\n', strjoin(extra', ', ')); nfail = nfail + 1;
@@ -57,6 +58,9 @@ nfail = nfail + check('datasheet: ctrl_limits.N_ref_min [rpm]', c.vars.ctrl_limi
 nfail = nfail + check('datasheet: focp_tune_cur_Kp', c.vars.focp_tune_cur_Kp, p.Kp_i, 0);
 nfail = nfail + check('datasheet: focp_tune_spd_Ki', c.vars.focp_tune_spd_Ki, p.Ki_speed, 0);
 nfail = nfail + check('datasheet: focp_tune_iq_max', c.vars.focp_tune_iq_max, c.vars.ctrl_limits.Iq_max, 0);
+nfail = nfail + check('datasheet: ctrl_limits.ov_enable', c.vars.ctrl_limits.ov_enable, 1, 0);
+nfail = nfail + check('datasheet: focp_tune_udc_max [V]', c.vars.focp_tune_udc_max, 30, 0);
+nfail = nfail + check('Ueberspannung Hysterese [V]', c.vars.ctrl_limits.Udc_hyst, 1, 0);
 % FOCP-Tabellenwerte (SI) = Auslegung (PU): cur.Kp in V/A, spd.Kp in A/rpm
 nfail = nfail + check('cur.Kp SI [V/A]', p.Kp_i * pu.V_base / pu.I_base, 0.255, 0.001);
 nfail = nfail + check('spd.Kp SI [A/rpm]', p.Kp_speed * pu.I_base / pu.N_base, 0.0053, 0.0001);
@@ -85,7 +89,7 @@ need = {'pmsm_ECI6360.p','pmsm_ECI6360.Rs','pmsm_ECI6360.Ld','pmsm_ECI6360.Lq','
     'PI_params.Ki_d_texas','PI_params.Kp_speed','PI_params.Ki_speed_texas','PI_params.Ki_speed', ...
     'T_pwm','Ts','Ts_inverter','Ts_motor','Ts_simulink','Ts_speed','availableSpeedModes','dataType', ...
     'ctrl_limits.Iq_min', 'ctrl_limits.Iq_max', 'ctrl_limits.reset_I_freemode', 'ctrl_limits.reset_I_cur_freemode', 'ctrl_limits.N_ref_min', ...
-    'focp_tune_cur_Kp', 'focp_tune_cur_Ki', 'focp_tune_spd_Kp', 'focp_tune_spd_Ki', 'focp_tune_iq_max', 'focp_tune_iq_min'};
+    'focp_tune_cur_Kp', 'focp_tune_cur_Ki', 'focp_tune_spd_Kp', 'focp_tune_spd_Ki', 'focp_tune_iq_max', 'focp_tune_iq_min', 'focp_tune_udc_max', 'ctrl_limits.Udc_hyst', 'ctrl_limits.ov_enable'};
 for prof = {'legacy_f2838', 'datasheet'}
     v = foc_config(prof{1}).vars;
     for k = 1:numel(need)

@@ -62,6 +62,10 @@ end
 % N_ref_min: unterhalb dieses Drehzahlsollwerts (PU) wird der I-Anteil des Drehzahlreglers auf 0
 % gehalten. Sonst integriert er bei Poti 0 Rauschen/Offset, bis der Motor alle ~20 s ruckt
 % (S5-Befund). datasheet 0,005 PU = 20 rpm bei N_base 4000; legacy 0 = aus (bitgleich).
+% Udc_max/Udc_hyst: Ueberspannungsabschaltung (Hardware-Review HW19, A1) auf das Udc in V.
+% Freemode ab Udc_max, frei wieder unter Udc_max - Udc_hyst. ov_enable: legacy 0 (bitgleich).
+v.ctrl_limits.Udc_max = 30;
+v.ctrl_limits.Udc_hyst = 1;
 switch lower(profile)
     case 'legacy_f2838'
         v.ctrl_limits.Iq_min = -0.5;
@@ -69,12 +73,14 @@ switch lower(profile)
         v.ctrl_limits.reset_I_cur_freemode = 0;
         v.ctrl_limits.N_ref_min = 0;
         v.ctrl_limits.Iq_max = 1;
+        v.ctrl_limits.ov_enable = 0;
     otherwise
         v.ctrl_limits.Iq_min = 0;
         v.ctrl_limits.reset_I_freemode = 1;
         v.ctrl_limits.reset_I_cur_freemode = 1;
         v.ctrl_limits.N_ref_min = 0.005;
         v.ctrl_limits.Iq_max = 0.1;
+        v.ctrl_limits.ov_enable = 1;
 end
 
 % Zur Laufzeit aenderbare Reglerwerte (FOC Studio, FOCP): skalare Kopien, die die PID-Bloecke nutzen.
@@ -86,6 +92,7 @@ v.focp_tune_spd_Kp = v.PI_params.Kp_speed;
 v.focp_tune_spd_Ki = v.PI_params.Ki_speed;
 v.focp_tune_iq_max = v.ctrl_limits.Iq_max;
 v.focp_tune_iq_min = v.ctrl_limits.Iq_min;
+v.focp_tune_udc_max = v.ctrl_limits.Udc_max;
 
 % Wird im Modell als Variant-Bedingung ~isequal(dataType,'single') genutzt,
 % steht aber nicht in der .mat-Datei.

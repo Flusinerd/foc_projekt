@@ -60,7 +60,7 @@ static void hal_tx(void) {}
 #define STEPS_PER_MS     2u       /* Ts_speed = 0.5 ms */
 #define STATUS_PERIOD_MS 100u
 #define TELEM_BASE_HZ    20000.0f /* focp_c28x_isr runs in the current ISR (PWM frequency) */
-#define N_TUNE           6u
+#define N_TUNE           7u
 
 static uint16_t s_init, s_active, s_enabled, s_comm_fault, s_div_ms, s_ms_status;
 static uint32_t s_rx_seen;
@@ -70,13 +70,15 @@ static float s_i_base = 1.0f, s_v_base = 1.0f, s_n_base = 1.0f;
  * model (matlab/tools/foc_focp_tunable.m); on the host they live here for the tests. */
 #if !defined(__TMS320C28XX__)
 float focp_tune_cur_Kp, focp_tune_cur_Ki, focp_tune_spd_Kp, focp_tune_spd_Ki, focp_tune_iq_max, focp_tune_iq_min;
+float focp_tune_udc_max;
 #endif
 
 /* Values compiled into the firmware. LOAD_DEFAULTS restores these and not the table defaults,
  * whose spd.Iq_min = -5 A would brake into a lab supply. */
 static float s_def[N_TUNE];
 static const uint16_t s_tune_param[N_TUNE] = {FOCP_P_CUR_KP, FOCP_P_CUR_KI, FOCP_P_SPD_KP,
-                                              FOCP_P_SPD_KI, FOCP_P_SPD_IQ_MAX, FOCP_P_SPD_IQ_MIN};
+                                              FOCP_P_SPD_KI, FOCP_P_SPD_IQ_MAX, FOCP_P_SPD_IQ_MIN,
+                                              FOCP_P_INV_UDC_MAX};
 
 static float *tune_var(uint16_t k)
 {
@@ -86,16 +88,19 @@ static float *tune_var(uint16_t k)
     case 2: return &focp_tune_spd_Kp;
     case 3: return &focp_tune_spd_Ki;
     case 4: return &focp_tune_iq_max;
-    default: return &focp_tune_iq_min;
+    case 5: return &focp_tune_iq_min;
+    default: return &focp_tune_udc_max;
     }
 }
 
-/* SI value = PU value * factor: current loop V/A, speed loop A/rpm, limits A */
+/* SI value = model value * factor: current loop V/A, speed loop A/rpm, current limits A,
+ * Udc_max is already in V */
 static float tune_factor(uint16_t k)
 {
     if (k < 2u) return s_v_base / s_i_base;
     if (k < 4u) return s_i_base / s_n_base;
-    return s_i_base;
+    if (k < 6u) return s_i_base;
+    return 1.0f;
 }
 
 static void publish_tunables(void)
@@ -119,7 +124,7 @@ static void on_param(uint16_t idx)
 
 void focp_c28x_reset(void) { s_init = 0; }
 
-void focp_c28x_step(uint16_t undervoltage, uint16_t freemode_can, uint16_t hot_temp,
+void focp_c28x_step(uint16_t undervoltage, uint16_t overvoltage, uint16_t freemode_can, uint16_t hot_temp,
                     uint16_t safe_state, uint16_t speed_mode, float speed_pu, float n_base,
                     float udc, const float *idq_ref_pu, float i_base, float v_base,
                     float temp, uint16_t hall_state, uint16_t *active, uint16_t *freemode, float *speed_ref)
@@ -159,10 +164,11 @@ void focp_c28x_step(uint16_t undervoltage, uint16_t freemode_can, uint16_t hot_t
             s_ms_status = 0;
             faults = 0;
             if (undervoltage) faults |= FOCP_FAULT_UNDERVOLTAGE;
+            if (overvoltage) faults |= FOCP_FAULT_OVERVOLTAGE;
             if (hot_temp) faults |= FOCP_FAULT_OVERTEMP;
             if (!safe_state) faults |= FOCP_FAULT_SAFE_INPUT;
             if (s_comm_fault) faults |= FOCP_FAULT_COMM;
-            fm = (uint16_t)(undervoltage || freemode_can || hot_temp || !safe_state || (s_active && !s_enabled));
+            fm = (uint16_t)(undervoltage || overvoltage || freemode_can || hot_temp || !safe_state || (s_active && !s_enabled));
             focp_target_status(s_comm_fault ? FOCP_ST_FAULT : (fm ? FOCP_ST_READY : FOCP_ST_RUN),
                                FOCP_MODE_SPEED, FOCP_SENS_HALL, faults, udc, temp);
         }
