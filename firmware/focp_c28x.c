@@ -124,6 +124,8 @@ float focp_tune_udc_max;
 /* Software overcurrent threshold (A): owned by this file, default from the model (ctrl_limits.I_trip)
  * on the first step, changed by FOC Studio via inv.I_max. */
 float focp_tune_i_trip;
+/* Number of start-up trips cleared when the protection was armed (diagnosis via JTAG/host tests). */
+volatile uint16_t focp_c28x_boot_trips;
 
 /* Values compiled into the firmware. LOAD_DEFAULTS restores these and not the table defaults,
  * whose spd.Iq_min = -5 A would brake into a lab supply. */
@@ -201,6 +203,7 @@ void focp_c28x_step(uint16_t undervoltage, uint16_t overvoltage, uint16_t freemo
         s_rx_seen = 0;
         s_arm_ms = 0;
         s_trip_reason = TRIP_HW;
+        focp_c28x_boot_trips = 0u;
         s_ic_acc = s_ic_n = 0u;
         s_ic_valid = s_sum_cnt = 0u;
         s_init = 1;                             /* last: enables focp_c28x_isr */
@@ -230,7 +233,16 @@ void focp_c28x_step(uint16_t undervoltage, uint16_t overvoltage, uint16_t freemo
 
     if (++s_div_ms >= STEPS_PER_MS) {
         s_div_ms = 0;
-        if (s_arm_ms < TRIP_ARM_MS) ++s_arm_ms;
+        if (s_arm_ms < TRIP_ARM_MS && ++s_arm_ms == TRIP_ARM_MS) {
+            /* Start-up trip (seen after every power-up, 2026-11-20): CMPSS3 fires while ISENB
+             * settles and the one-shot latch keeps the drive locked, also in potentiometer mode.
+             * Clear it once when the protection is armed, under the same conditions as ACK_FAULT. */
+            if (tripped && s_trip_reason == TRIP_HW && !hal_cmpss_active() && s_i_peak < focp_tune_i_trip) {
+                hal_trip_clear();
+                tripped = 0;
+                ++focp_c28x_boot_trips;
+            }
+        }
         if (focp_target_tick_1ms() && s_active && s_enabled) { s_comm_fault = 1; s_enabled = 0; }
         if (++s_ms_status >= STATUS_PERIOD_MS) {
             s_ms_status = 0;

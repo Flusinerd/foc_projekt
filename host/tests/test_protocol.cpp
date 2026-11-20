@@ -370,6 +370,30 @@ static void testC28xGlue()
     CHECK((statusFaults() & FOCP_FAULT_CURRENT_SUM) == 0);                   // 19 samples: not yet
     for (int i = 0; i < 20; ++i) focp_c28x_isr(ia8, 0.0f, zero2, zero2, 2050);
     CHECK((statusFaults() & FOCP_FAULT_CURRENT_SUM) != 0);
+
+    // start-up trip: comparator fired while ISENB settled and has dropped -> cleared once at arming
+    focp_c28x_isr(zero2, 0.0f, zero2, zero2, 2050);
+    focp_c28x_reset();
+    focp_c28x_host_cmpss(1);
+    focp_c28x_host_cmpss(0);                          // latched, comparator inactive again
+    focp_c28x_step(0, 0, 0, 0, 1, 1, 0.0f, 4000.0f, 24.0f, z, 56.0f, 13.856f, 30.0f, 3, 15.0f, 3.0f, &active, &fm, &ref);
+    CHECK((statusFaults() & FOCP_FAULT_OC_HW) != 0);  // 125 ms: still latched
+    for (int i = 0; i < 4; ++i) statusFaults();       // > 500 ms
+    CHECK(statusFaults() == 0);
+    CHECK(focp_c28x_boot_trips == 1);
+    // comparator still active at arming -> not cleared, and no second automatic clear later
+    focp_c28x_reset();
+    focp_c28x_host_cmpss(1);
+    focp_c28x_step(0, 0, 0, 0, 1, 1, 0.0f, 4000.0f, 24.0f, z, 56.0f, 13.856f, 30.0f, 3, 15.0f, 3.0f, &active, &fm, &ref);
+    for (int i = 0; i < 5; ++i) statusFaults();
+    CHECK((statusFaults() & FOCP_FAULT_OC_HW) != 0);
+    focp_c28x_host_cmpss(0);
+    for (int i = 0; i < 5; ++i) statusFaults();
+    CHECK((statusFaults() & FOCP_FAULT_OC_HW) != 0);  // stays latched until ACK
+    CHECK(focp_c28x_boot_trips == 0);
+    focp_build_cmd(&m, 1, FOCP_CMD_ACK_FAULT); raw[0] = m.data[0];
+    focp_target_rx_can(0x201, raw, 1);
+    CHECK(statusFaults() == 0);
 }
 
 int main()

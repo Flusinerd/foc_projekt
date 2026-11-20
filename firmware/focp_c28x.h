@@ -54,6 +54,9 @@ void focp_c28x_isr(const float *iab_pu, float pos_pu, const float *idq_pu, const
 extern float focp_tune_cur_Kp, focp_tune_cur_Ki, focp_tune_spd_Kp, focp_tune_spd_Ki;
 extern float focp_tune_iq_max, focp_tune_iq_min, focp_tune_udc_max;
 extern float focp_tune_i_trip;   /* software overcurrent threshold |i| in A (inv.I_max), defined in focp_c28x.c */
+/* Start-up trips cleared once when the protection is armed (500 ms after start): a CMPSS3 trip
+ * latched while ISENB settles is cleared if the comparator is inactive and the current is low. */
+extern volatile uint16_t focp_c28x_boot_trips;
 
 /* Host tests only: reset the internal state (the target initialises on the first step). */
 void focp_c28x_reset(void);
