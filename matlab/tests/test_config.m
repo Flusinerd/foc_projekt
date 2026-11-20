@@ -65,6 +65,7 @@ nfail = nfail + check('Ueberspannung Hysterese [V]', c.vars.ctrl_limits.Udc_hyst
 nfail = nfail + check('datasheet: CMPSS DAC hoch', c.vars.ctrl_limits.cmpss_dac_hi, 2597, 0);
 nfail = nfail + check('datasheet: CMPSS DAC tief', c.vars.ctrl_limits.cmpss_dac_lo, 1499, 0);
 nfail = nfail + check('datasheet: ctrl_limits.I_trip [A]', c.vars.ctrl_limits.I_trip, 15, 0);
+nfail = nfail + check('datasheet: ctrl_limits.I_sum_max [A]', c.vars.ctrl_limits.I_sum_max, 3, 0);
 % FOCP-Tabellenwerte (SI) = Auslegung (PU): cur.Kp in V/A, spd.Kp in A/rpm
 nfail = nfail + check('cur.Kp SI [V/A]', p.Kp_i * pu.V_base / pu.I_base, 0.255, 0.001);
 nfail = nfail + check('spd.Kp SI [A/rpm]', p.Kp_speed * pu.I_base / pu.N_base, 0.0053, 0.0001);
@@ -94,7 +95,7 @@ need = {'pmsm_ECI6360.p','pmsm_ECI6360.Rs','pmsm_ECI6360.Ld','pmsm_ECI6360.Lq','
     'T_pwm','Ts','Ts_inverter','Ts_motor','Ts_simulink','Ts_speed','availableSpeedModes','dataType', ...
     'ctrl_limits.Iq_min', 'ctrl_limits.Iq_max', 'ctrl_limits.reset_I_freemode', 'ctrl_limits.reset_I_cur_freemode', 'ctrl_limits.N_ref_min', ...
     'focp_tune_cur_Kp', 'focp_tune_cur_Ki', 'focp_tune_spd_Kp', 'focp_tune_spd_Ki', 'focp_tune_iq_max', 'focp_tune_iq_min', 'focp_tune_udc_max', 'ctrl_limits.Udc_hyst', 'ctrl_limits.ov_enable', ...
-    'ctrl_limits.I_trip', 'ctrl_limits.cmpss_dac_hi', 'ctrl_limits.cmpss_dac_lo'};
+    'ctrl_limits.I_trip', 'ctrl_limits.cmpss_dac_hi', 'ctrl_limits.cmpss_dac_lo', 'ctrl_limits.I_sum_max'};
 for prof = {'legacy_f2838', 'datasheet'}
     v = foc_config(prof{1}).vars;
     for k = 1:numel(need)

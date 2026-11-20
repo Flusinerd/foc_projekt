@@ -74,6 +74,9 @@ dac_span = v.ctrl_limits.I_trip * abs(v.inverter_DRV8300.ISenseVoltPerAmp) * ...
     (v.target_f2838.ADC_MaxCount + 1) / v.target_f2838.ADC_Vref;
 v.ctrl_limits.cmpss_dac_hi = round((v.target_f2838.ADC_MaxCount + 1) / 2 + dac_span);
 v.ctrl_limits.cmpss_dac_lo = round((v.target_f2838.ADC_MaxCount + 1) / 2 - dac_span);
+% I_sum_max: Plausibilitaet der drei gemessenen Phasenstroeme (Hardware-Review HW06, A3):
+% |ia + ib + ic| > I_sum_max ueber 1 ms -> Trip und Fehler "Stromsumme" (firmware/focp_c28x.c). 0 = aus.
+v.ctrl_limits.I_sum_max = 3;
 switch lower(profile)
     case 'legacy_f2838'
         v.ctrl_limits.Iq_min = -0.5;

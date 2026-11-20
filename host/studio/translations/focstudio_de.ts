@@ -620,6 +620,16 @@
     </message>
     <message>
         <location filename="../FaultText.cpp" line="103"/>
+        <source>Current measurement implausible</source>
+        <translation>Strommessung unplausibel</translation>
+    </message>
+    <message>
+        <location filename="../FaultText.cpp" line="104"/>
+        <source>The three phase currents do not add up to zero. Check the current sense wiring and the offset calibration (restart with the motor at standstill).</source>
+        <translation>Die drei Phasenströme ergeben in der Summe nicht null. Verkabelung der Strommessung und Offsetkalibrierung prüfen (Neustart bei stehendem Motor).</translation>
+    </message>
+    <message>
+        <location filename="../FaultText.cpp" line="103"/>
         <source>Unknown fault (bit 0x%1)</source>
         <translation>Unbekannter Fehler (Bit 0x%1)</translation>
     </message>

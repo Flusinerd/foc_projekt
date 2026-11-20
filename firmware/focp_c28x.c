@@ -104,8 +104,16 @@ static uint16_t s_init, s_active, s_enabled, s_comm_fault, s_div_ms, s_ms_status
 static uint32_t s_rx_seen;
 static float s_i_base = 1.0f, s_v_base = 1.0f, s_n_base = 1.0f;
 static uint16_t s_arm_ms;                       /* ms since start, up to TRIP_ARM_MS */
-static volatile uint16_t s_sw_trip;             /* last trip came from the software check */
+enum { TRIP_HW = 0, TRIP_SW_OC = 1, TRIP_SUM = 2 };
+#define SUM_SAMPLES      20u      /* consecutive ISR samples (1 ms) with |ia+ib+ic| > i_sum_max */
+#define IC_CAL_MAX_A     0.5f     /* I_C offset is averaged only while |ia|, |ib| are below this */
+static volatile uint16_t s_trip_reason;         /* cause of the active trip, TRIP_HW unless set by the ISR */
 static volatile float s_i_peak;                 /* largest |phase current| of the last ISR sample (A) */
+static volatile float s_i_sum;                  /* |ia + ib + ic| of the last ISR sample (A) */
+static float s_i_sum_max;                       /* plausibility threshold (A), 0 = off */
+static uint32_t s_ic_acc, s_ic_n;               /* I_C offset averaging (ADC counts) */
+static float s_ic_offset;
+static uint16_t s_ic_valid, s_sum_cnt;
 
 /* Tunable controller parameters in PU. On the target they are ExportedGlobal parameters of the
  * model (matlab/tools/foc_focp_tunable.m); on the host they live here for the tests. */
@@ -172,13 +180,14 @@ void focp_c28x_reset(void) { s_init = 0; }
 void focp_c28x_step(uint16_t undervoltage, uint16_t overvoltage, uint16_t freemode_can, uint16_t hot_temp,
                     uint16_t safe_state, uint16_t speed_mode, float speed_pu, float n_base,
                     float udc, const float *idq_ref_pu, float i_base, float v_base,
-                    float temp, uint16_t hall_state, float i_trip, uint16_t *active, uint16_t *freemode,
-                    float *speed_ref)
+                    float temp, uint16_t hall_state, float i_trip, float i_sum_max, uint16_t *active,
+                    uint16_t *freemode, float *speed_ref)
 {
     float arg, span, ref;
     uint16_t cmd, faults, fm, k, tripped;
 
     s_i_base = i_base; s_v_base = v_base; s_n_base = n_base;
+    s_i_sum_max = i_sum_max;
     if (!s_init) {
         focp_target_init(FOCP_C28X_NODE);
         focp_tune_i_trip = i_trip;
@@ -191,7 +200,9 @@ void focp_c28x_step(uint16_t undervoltage, uint16_t overvoltage, uint16_t freemo
         s_div_ms = s_ms_status = 0;
         s_rx_seen = 0;
         s_arm_ms = 0;
-        s_sw_trip = 0;
+        s_trip_reason = TRIP_HW;
+        s_ic_acc = s_ic_n = 0u;
+        s_ic_valid = s_sum_cnt = 0u;
         s_init = 1;                             /* last: enables focp_c28x_isr */
     }
 
@@ -209,9 +220,9 @@ void focp_c28x_step(uint16_t undervoltage, uint16_t overvoltage, uint16_t freemo
         else if (cmd == FOCP_CMD_DISABLE) s_enabled = 0;
         else if (cmd == FOCP_CMD_ACK_FAULT) {
             s_comm_fault = 0;
-            if (tripped && !hal_cmpss_active() && s_i_peak < focp_tune_i_trip) {
+            if (tripped && !hal_cmpss_active() && s_i_peak < focp_tune_i_trip && s_sum_cnt == 0u) {
                 hal_trip_clear();
-                s_sw_trip = 0;
+                s_trip_reason = TRIP_HW;
                 tripped = 0;
             }
         }
@@ -229,7 +240,9 @@ void focp_c28x_step(uint16_t undervoltage, uint16_t overvoltage, uint16_t freemo
             if (hot_temp) faults |= FOCP_FAULT_OVERTEMP;
             if (!safe_state) faults |= FOCP_FAULT_SAFE_INPUT;
             if (s_comm_fault) faults |= FOCP_FAULT_COMM;
-            if (tripped) faults |= s_sw_trip ? FOCP_FAULT_OC_SW : FOCP_FAULT_OC_HW;
+            if (tripped)
+                faults |= s_trip_reason == TRIP_SUM ? FOCP_FAULT_CURRENT_SUM
+                        : (s_trip_reason == TRIP_SW_OC ? FOCP_FAULT_OC_SW : FOCP_FAULT_OC_HW);
             fm = (uint16_t)(undervoltage || overvoltage || freemode_can || hot_temp || !safe_state || (s_active && !s_enabled));
             focp_target_status((s_comm_fault || tripped) ? FOCP_ST_FAULT : (fm ? FOCP_ST_READY : FOCP_ST_RUN),
                                FOCP_MODE_SPEED, FOCP_SENS_HALL, faults, udc, temp);
@@ -258,21 +271,44 @@ void focp_c28x_step(uint16_t undervoltage, uint16_t overvoltage, uint16_t freemo
     *speed_ref = ref;
 }
 
-void focp_c28x_isr(const float *iab_pu, float pos_pu, const float *idq_pu, const float *vdq_pu)
+void focp_c28x_isr(const float *iab_pu, float pos_pu, const float *idq_pu, const float *vdq_pu,
+                   uint16_t ic_raw)
 {
-    float ia, ib, ic, peak;
+    float ia, ib, ic, peak, sum;
+    const uint16_t armed = (uint16_t)(s_arm_ms >= TRIP_ARM_MS);
     if (!s_init) return;                        /* bases and protocol are set up by the speed task */
     ia = iab_pu[0] * s_i_base;
     ib = iab_pu[1] * s_i_base;
-    ic = -(ia + ib);
+    /* I_C (ADCINB3): same scaling as the model uses for I_A/I_B, (ADC - offset) / 2048 PU.
+     * The offset is averaged while the protection is not yet armed and the currents are small. */
+    if (!armed) {
+        if ((ia < 0.0f ? -ia : ia) < IC_CAL_MAX_A && (ib < 0.0f ? -ib : ib) < IC_CAL_MAX_A) {
+            s_ic_acc += ic_raw;
+            ++s_ic_n;
+        }
+        ic = -(ia + ib);
+    } else {
+        if (s_ic_n != 0u) { s_ic_offset = (float)s_ic_acc / (float)s_ic_n; s_ic_n = 0u; s_ic_valid = 1u; }
+        ic = s_ic_valid ? ((float)ic_raw - s_ic_offset) / 2048.0f * s_i_base : -(ia + ib);
+    }
     peak = ia < 0.0f ? -ia : ia;
     if ((ib < 0.0f ? -ib : ib) > peak) peak = ib < 0.0f ? -ib : ib;
     if ((ic < 0.0f ? -ic : ic) > peak) peak = ic < 0.0f ? -ic : ic;
     s_i_peak = peak;
-    /* software overcurrent (I_A and I_C have no comparator, HW16); same latch as the CMPSS trip */
-    if (s_arm_ms >= TRIP_ARM_MS && peak > focp_tune_i_trip && !hal_trip_active()) {
-        hal_trip_force();
-        s_sw_trip = 1;
+    /* plausibility ia + ib + ic = 0 (only with a measured ic) */
+    sum = ia + ib + ic;
+    if (sum < 0.0f) sum = -sum;
+    if (s_ic_valid && s_i_sum_max > 0.0f && sum > s_i_sum_max) {
+        if (s_sum_cnt < SUM_SAMPLES) ++s_sum_cnt;
+    } else {
+        s_sum_cnt = 0u;
+    }
+    s_i_sum = sum;
+    /* software overcurrent (I_A and I_C have no comparator, HW16) and implausible current sum;
+     * same latch as the CMPSS trip */
+    if (armed && !hal_trip_active()) {
+        if (peak > focp_tune_i_trip) { hal_trip_force(); s_trip_reason = TRIP_SW_OC; }
+        else if (s_sum_cnt >= SUM_SAMPLES) { hal_trip_force(); s_trip_reason = TRIP_SUM; }
     }
     focp_target_set_signal(FOCP_S_IA, ia);
     focp_target_set_signal(FOCP_S_IB, ib);

@@ -99,6 +99,10 @@ std::vector<FaultText> DriveTexts::faults(uint16_t faults)
             out.push_back({b, tr("Overspeed"),
                            tr("Check the speed setpoint and whether the motor is being driven externally.")});
             break;
+        case FOCP_FAULT_CURRENT_SUM:
+            out.push_back({b, tr("Current measurement implausible"),
+                           tr("The three phase currents do not add up to zero. Check the current sense wiring and the offset calibration (restart with the motor at standstill).")});
+            break;
         default:
             out.push_back({b, tr("Unknown fault (bit 0x%1)").arg(b, 4, 16, QLatin1Char('0')),
                            tr("The drive firmware is newer than this program. Update FOC Studio.")});

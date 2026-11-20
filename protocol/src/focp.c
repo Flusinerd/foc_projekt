@@ -74,6 +74,7 @@ const char *focp_fault_name(uint16_t fault_bit)
     case FOCP_FAULT_SAFE_INPUT:   return "Sicherheitseingang";
     case FOCP_FAULT_PARAM:        return "Parameterfehler";
     case FOCP_FAULT_OVERSPEED:    return "Ueberdrehzahl";
+    case FOCP_FAULT_CURRENT_SUM:  return "Stromsumme";
     default:                      return "?";
     }
 }

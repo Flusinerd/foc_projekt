@@ -33,18 +33,21 @@ extern "C" {
 
 /* Speed task (2 kHz). Inputs: legacy signals (0/1, incl. overvoltage), speedMode 1..3, measured speed in PU,
  * N_base in rpm, Udc in V, [id iq] reference in PU, I_base in A, V_base in V, temperature in degC,
- * Hall state (C|B|A), software overcurrent threshold in A (default for inv.I_max, used on the first step).
+ * Hall state (C|B|A), software overcurrent threshold in A (default for inv.I_max, used on the first step),
+ * plausibility threshold for |ia+ib+ic| in A (0 = off).
  * Outputs: active (FOCP owns the reference), freemode request, speed reference 0..1
  * (same scaling as the potentiometer value Speed_Ref). */
 void focp_c28x_step(uint16_t undervoltage, uint16_t overvoltage, uint16_t freemode_can, uint16_t hot_temp,
                     uint16_t safe_state, uint16_t speed_mode, float speed_pu, float n_base,
                     float udc, const float *idq_ref_pu, float i_base, float v_base,
-                    float temp, uint16_t hall_state, float i_trip, uint16_t *active, uint16_t *freemode,
-                    float *speed_ref);
+                    float temp, uint16_t hall_state, float i_trip, float i_sum_max, uint16_t *active,
+                    uint16_t *freemode, float *speed_ref);
 
-/* Current ISR (20 kHz): [ia ib], electrical position, [id iq], [Vd Vq] in PU. Sets the fast
- * telemetry signals and samples the telemetry (divider 1 = every PWM period). */
-void focp_c28x_isr(const float *iab_pu, float pos_pu, const float *idq_pu, const float *vdq_pu);
+/* Current ISR (20 kHz): [ia ib], electrical position, [id iq], [Vd Vq] in PU, raw ADC count of I_C
+ * (ADCINB3). Software overcurrent and current-sum checks, fast telemetry signals, samples the
+ * telemetry (divider 1 = every PWM period). */
+void focp_c28x_isr(const float *iab_pu, float pos_pu, const float *idq_pu, const float *vdq_pu,
+                   uint16_t ic_raw);
 
 /* Tunable controller parameters (PU), written when FOC Studio changes cur.Kp/Ki, spd.Kp/Ki,
  * spd.Iq_max/Iq_min (PU) and inv.Udc_max (V). Defined by the generated model code (ExportedGlobal). */

@@ -185,6 +185,7 @@ typedef enum { FOCP_SENS_HALL = 0, FOCP_SENS_SENSORLESS = 1, FOCP_SENS_HYBRID = 
 #define FOCP_FAULT_SAFE_INPUT   0x0100u /* safe-state input (button)        */
 #define FOCP_FAULT_PARAM        0x0200u /* inconsistent parameters          */
 #define FOCP_FAULT_OVERSPEED    0x0400u
+#define FOCP_FAULT_CURRENT_SUM  0x0800u /* ia + ib + ic clearly not zero        */
 
 typedef enum {
     FOCP_EV_FAULT_SET    = 1, /* code = fault bit(s)   */
