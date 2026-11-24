@@ -192,11 +192,9 @@ dass Widerstand und Induktivität im Datenblatt des Motors Klemmenwerte sind.
 
 \subsection{Profile}
 
-Über das Argument von \skript{foc\_startup} wird eines von zwei Profilen geladen
+Über das Argument von \skript{foc\_startup} kann eines von zwei Profilen geladen werden
 (\cref{tab:profile}). Das geladene Profil steht anschließend in der Variablen
-\texttt{foc\_active\_profile}, damit Prüfskripte und Berichte erkennen können, mit welchem
-Datensatz ein Ergebnis entstanden ist.
-
+\texttt{foc\_active\_profile}. Dadurch ist es Prüfskripten und Berichte möglich das geladene Profil zu erkennen.
 \begin{table}[htbp]
   \centering
   \caption{Konfigurationsprofile}
@@ -224,16 +222,16 @@ Datensatz ein Ergebnis entstanden ist.
   \end{tabularx}
 \end{table}
 
-Das Profil \texttt{legacy\_f2838} reproduziert jedes Feld der Parameterdatei der \ac{MA}
-bitgenau. Zusätzlich legt es die in der Datei fehlende Variable \texttt{dataType} an
-(Befund B5). Das Profil \texttt{datasheet} enthält die korrigierten Werte. Neue Parameter,
+Das Profil \texttt{legacy\_f2838} reproduziert jedes Feld der \ac{MA}
+bitgenau. Zusätzlich legt es die in der Datei die fehlende Variable \texttt{dataType} an
+(Befund B5). Das Profil \texttt{datasheet} enthält die aus dem Datenblatt entnommenen korrigierten Werte. Neue Parameter,
 die im Lauf der Arbeit hinzukamen, etwa die Grenzen in der Struktur \texttt{ctrl\_limits},
 erhalten in beiden Profilen einen Wert: im Profil \texttt{legacy\_f2838} den Wert, der dem
 Altmodell entspricht, im Profil \texttt{datasheet} den für den Betrieb vorgesehenen.
 
 \subsection{Selbsttest der Konfiguration}
 
-Das Skript \skript{test\_config} prüft die Konfiguration in drei Teilen:
+Das Skript \skript{test\_config} dient dem Selbsttest der Konfiguration. Es besteht dabei aus drei Teile:
 
 \begin{enumerate}
   \item Das Profil \texttt{legacy\_f2838} wird Feld für Feld mit
@@ -244,12 +242,12 @@ Das Skript \skript{test\_config} prüft die Konfiguration in drei Teilen:
     Polradfluss, die Bezugsgröße des Stroms aus der Messkette oder die Durchtrittsfrequenz
     des ausgelegten Drehzahlregelkreises.
   \item Für beide Profile wird geprüft, ob alle Variablen vorhanden sind, die die Modelle
-    referenzieren.
+    verwenden.
 \end{enumerate}
 
 Nach jeder Änderung an \datei{config/} oder \datei{design/} muss \skript{test\_config}
 \enquote{ALL PASSED} melden. Die Prüfung läuft in wenigen Sekunden und ist damit die erste
-Stufe jedes Nachweises.
+Stufe jedes durchgeführten Nachweises.
 
 % ---------------------------------------------------------------
 \section{Versionsverwaltung und Nachvollziehbarkeit}
@@ -280,7 +278,7 @@ Git-Repository. Für die Arbeit gelten folgende Regeln:
     zeigte in den Verläufen aber eine Dauerschwingung (\cref{ch:regler}).
 \end{itemize}
 
-Der Verlauf der wichtigsten Stände ist in \cref{app:verlauf} zusammengestellt. Über die
+In \cref{app:verlauf} ist der Verlauf der wichtigsten Zwischenstände zusammengestellt. Über die
 Kombination aus Commit, Konfigurationsprofil und Bericht lässt sich für jedes Ergebnis in
 diesem Bericht angeben, mit welchem Modellstand und welchen Parametern es entstanden ist.
 

@@ -1,15 +1,251 @@
 \chapter{Überführung in eine Komponentenbibliothek}
 \label{ch:bibliothek}
 
+Das Altmodell \datei{impmodel.slx} ist ein einzelnes Modell, in dem alle
+Komponenten fest eingebaut sind. Eine zweite Anwendung, etwa eine Lageregelung, müsste
+das Modell kopieren und die Komponenten doppelt pflegen. Ziel dieses Schritts ist es, die
+Komponenten in eine Simulink-Bibliothek zu überführen und das Anwendungsmodell daraus
+zusammenzusetzen. Dabei muss das Verhalten identisch bleiben. Der Schritt gliedert sich in
+die Ablösung der Parameterdatei (P0), den Aufbau von Bibliothek und Anwendungsmodell (P1a)
+und den Nachweis, dass nach der Umstellung das Verhalten der Modelle identisch ist.
+
+% ---------------------------------------------------------------
 \section{Parameter aus Skripten (P0)}
-% params_f2838.mat -> foc_config, Behebung B5
-\offen{Text}
+\label{sec:p0}
 
-\section{Bibliothek focLib und Anwendungsmodell app\_speed (P1a)}
-% foc_build_library: Subsysteme als Bibliotheksblöcke, app_speed verknüpft sie
-\offen{Text, Abbildung Struktur focLib / app\_speed}
+Im ersten Schritt wird die Binärdatei \datei{params\_f2838.mat} durch das
+Konfigurationsprofil \texttt{legacy\_f2838} ersetzt (\cref{sec:profile}). Das Skript
+\skript{foc\_legacy\_f2838} enthält die Werte der Datei als lesbare Zuweisungen. Die
+Zahlenwerte wurden eins zu eins übernommen, auch dort, wo sie offenkundig
+fehlerhaft sind (Befund B3). Ein Kommentar im Skript verweist auf diese Abweichungen. Die
+Korrektur erfolgt ausschließlich im Profil \texttt{datasheet}, damit das Referenzprofil das
+Altmodell unverändert abbildet.
 
+Dass beide Datenquellen gleichwertig sind, prüft \skript{test\_config}: Jedes Feld jeder
+Struktur des Profils wird mit dem entsprechenden Feld der \texttt{.mat}-Datei verglichen,
+Zahlenwerte auf exakte Gleichheit und Zeichenketten zeichenweise. Zusätzlich wird geprüft, dass
+alle Variablen vorhanden sind, die das Modell referenziert.
+
+In diesem Schritt wird auch Befund B5 behoben. Das Modell verwendet die Variable
+\texttt{dataType} als Bedingung seiner Datentyp-Varianten, sie fehlt aber in der
+Parameterdatei. \skript{foc\_config} legt sie in beiden Profilen mit dem Festkommatyp
+\texttt{fixdt(1,32,17)} an.
+
+Nach P0 lässt sich das unveränderte Altmodell allein mit
+\texttt{foc\_startup('legacy\_f2838')} simulieren und übersetzen, ohne dass die
+\texttt{.mat}-Datei geladen wird.
+
+% ---------------------------------------------------------------
+\section{Bibliothek \texttt{focLib} und Anwendungsmodell \texttt{app\_speed} (P1a)}
+\label{sec:p1a}
+
+\subsection{Aufbau}
+
+Simulink unterscheidet zwischen Bibliotheken und Modellen. Ein Block, der aus einer
+Bibliothek in ein Modell eingefügt wird, ist ein \emph{Bibliotheksverweis} (Library Link):
+Das Modell speichert nur den Verweis, der Inhalt kommt aus der Bibliothek. Eine Änderung an
+der Bibliothek wirkt damit auf alle Modelle, die den Block verwenden, und eine Komponente kann
+unabhängig von der Anwendung getestet werden.
+
+Das Werkzeugskript \skript{foc\_build\_library} erzeugt aus dem Altmodell zwei Dateien
+(\cref{fig:p1a}):
+
+\begin{itemize}
+  \item \datei{focLib.slx}: eine Bibliothek mit den acht Hauptkomponenten des Altmodells
+    (\cref{tab:focLib}), unverändert kopiert,
+  \item \datei{app\_speed.slx}: eine Kopie des Altmodells, in der diese acht Komponenten
+    durch Verweise auf \texttt{focLib} ersetzt sind.
+\end{itemize}
+
+\begin{figure}[htbp]
+  \centering
+  \begin{tikzpicture}[
+      font=\footnotesize,
+      file/.style={draw, align=center, minimum height=10mm, text width=30mm,
+                   font=\footnotesize},
+      comp/.style={draw, fill=gray!10, align=center, minimum height=5mm, text width=30mm,
+                   font=\scriptsize\sffamily},
+      sig/.style={-Latex},
+    ]
+    \node[file] (old) {\datei{impmodel.slx}\\\scriptsize Altmodell, nur lesen};
+    \node[file, right=30mm of old, yshift=14mm, minimum height=40mm, text depth=33mm]
+      (lib) {\datei{focLib.slx}\\\scriptsize Bibliothek};
+    \node[file, right=30mm of old, yshift=-22mm] (app)
+      {\datei{app\_speed.slx}\\\scriptsize Anwendungsmodell};
+
+    \foreach \n [count=\i] in {Input Controller, Speed Control, Torque Controller,
+        Hall Sensor A/B/C, ADC Offset Function, Plant Model}
+      \node[comp] at ([yshift=-7mm - \i*5.2mm]lib.north) (c\i) {\n};
+
+    \draw[sig] (old.east) -- node[above, sloped]{Blöcke kopieren} (lib.west);
+    \draw[sig] (old.east) -- node[below, sloped]{Datei kopieren} (app.west);
+    \draw[sig, dashed] (app.north) -- node[right, align=left]{Bibliotheks-\\verweise}
+      (lib.south);
+
+    \node[right=4mm of app, align=left, font=\scriptsize] {Komponenten per\\
+      \texttt{replace\_block} ersetzt,\\Verbindungen bleiben erhalten};
+  \end{tikzpicture}
+  \caption{Erzeugung von Bibliothek und Anwendungsmodell aus dem Altmodell durch
+    \skript{foc\_build\_library}}
+  \label{fig:p1a}
+\end{figure}
+
+\begin{table}[htbp]
+  \centering
+  \caption{Komponenten der Bibliothek \texttt{focLib} (Stand P1a)}
+  \label{tab:focLib}
+  \small
+  \begin{tabularx}{\linewidth}{@{}>{\sffamily}lX@{}}
+    \toprule
+    \normalfont Block & Aufgabe \\
+    \midrule
+    Input Controller & Sollwert, Unterspannung, Übertemperatur, SafeState, CAN-Kommandos \\
+    Speed Control & Freemode-Logik, Sollwertberechnung, Drehzahlregler \\
+    Torque Controller & Stromregelung (\ac{FOC}) im Takt der \ac{ADC}-\ac{ISR} \\
+    Hall Sensor A, B, C & Auswertung der Hall-Signale je eCAP-Interrupt \\
+    ADC Offset Function & Kalibrierung des Stromsensor-Offsets beim Start \\
+    Inverter and Motor -- Plant Model & Streckenmodell für die Simulation \\
+    \bottomrule
+  \end{tabularx}
+\end{table}
+
+Nicht in die Bibliothek übernommen wurden die Blöcke, die nur die Ausführung des konkreten
+Modells organisieren: die Interrupt-Zuordnung (\block{Code Generation}), die Initialisierung
+(\block{System Initialize}), die Data Stores sowie \block{IPC Write for eCAP INTs} und
+\block{Heartbeat LED}. Sie bleiben Teil des Anwendungsmodells.
+
+\subsection{Ablauf des Skripts}
+
+\skript{foc\_build\_library} arbeitet in vier Schritten:
+
+\begin{enumerate}
+  \item \textbf{Quelle prüfen:} Das Altmodell wird geladen, jede der acht Komponenten muss
+    auf der obersten Ebene genau einmal vorkommen. Andernfalls bricht das Skript ab.
+  \item \textbf{Bibliothek anlegen:} Eine neue Bibliothek wird erzeugt, die Komponenten
+    werden mit \texttt{add\_block} hineinkopiert und gespeichert. Das Altmodell wird ohne
+    Speichern geschlossen.
+  \item \textbf{Anwendungsmodell anlegen:} Die Modelldatei wird als Ganzes kopiert, sodass
+    Konfiguration, Hardware-Einstellungen und alle übrigen Blöcke erhalten bleiben. In der
+    Kopie ersetzt \texttt{replace\_block} jede Komponente durch den gleichnamigen
+    Bibliotheksblock. Weil Ein- und Ausgänge gleich heißen, bleiben alle Verbindungen
+    bestehen. Für jeden ersetzten Block prüft das Skript, ob der Parameter
+    \texttt{ReferenceBlock} auf die Bibliothek zeigt.
+  \item \textbf{Kurzprüfung:} Ein \emph{Update Diagram} stellt sicher, dass das neue Modell
+    übersetzbar ist.
+\end{enumerate}
+
+Die vier Test-Harnesses der \ac{MA} hängen an Blöcken innerhalb der ersetzten Komponenten.
+Sie werden in der Kopie vor dem Ersetzen entfernt. Im Altmodell entgegen bleiben sie erhalten. Ihre
+Übertragung auf die Bibliothek beschreibt \cref{ch:verifikation}.
+
+\subsection{Erfahrung bei der Erzeugung}
+
+Der erste als P1a committete Stand enthielt bereits die Korrektur der Stromregler aus P1b.
+Das fiel bei der Prüfung vor P1b auf, als die Parameter der PID-Blöcke ausgelesen wurden:
+Statt der Originalwerte standen dort die korrigierten. Da die Bibliothek vollständig aus dem
+Altmodell erzeugt wird, ließ sich der Stand durch erneutes Ausführen von
+\skript{foc\_build\_library} korrekt wiederherstellen. Dabei zeigte sich eine weitere
+Fehlerquelle: Eine parallel geöffnete MATLAB-Sitzung hielt \datei{app\_speed.slx} geöffnet
+und hätte beim Schließen ihre ältere Fassung der Bibliothek zurückgeschrieben. Erst nachdem
+alle Modelle in dieser Sitzung ohne Speichern geschlossen waren, wurde der Stand neu erzeugt,
+geprüft und mit dem Tag \texttt{P1a} versehen. Seitdem wird vor jedem Schritt, der auf einem
+bestimmten Stand aufbaut, der Zustand der Reglerblöcke ausgelesen und protokolliert.
+
+% ---------------------------------------------------------------
 \section{Äquivalenznachweis zum Altmodell}
-% foc_check_equivalence / foc_equivalence_p1a: alle Abweichungen exakt 0;
-% wird nach jeder späteren Änderung mit Profil legacy_f2838 wiederholt
-\offen{Text, Ergebnistabelle}
+\label{sec:aequivalenz}
+
+\subsection{Verfahren}
+
+Ob P0 und P1a das Verhalten verändert haben, prüft \skript{foc\_check\_equivalence} durch
+einen Simulationsvergleich (\cref{fig:aequivalenz}):
+
+\begin{enumerate}
+  \item Das Altmodell und das Anwendungsmodell \datei{app\_speed.slx} werden mit demselben
+    Profil \texttt{legacy\_f2838} geladen.
+  \item An allen Ausgängen der vier Komponenten \block{Input Controller},
+    \block{Speed Control}, \block{Torque Controller} und
+    \block{Inverter and Motor -- Plant Model} wird die Signalaufzeichnung eingeschaltet.
+  \item Beide Modelle werden in der Variante \texttt{sim} über \SI{0,5}{\second} simuliert.
+    Die Logging-Einstellungen werden danach verworfen, die Modelle nicht gespeichert.
+  \item Für jedes aufgezeichnete Signal wird die größte Abweichung
+    $\max_k |x_A(k) - x_B(k)|$ berechnet. Unterscheidet sich die Anzahl der Abtastwerte,
+    gilt die Abweichung als unendlich.
+\end{enumerate}
+
+\begin{figure}[htbp]
+  \centering
+  \begin{tikzpicture}[
+      font=\footnotesize,
+      box/.style={draw, align=center, minimum height=9mm, text width=27mm},
+      sig/.style={-Latex},
+    ]
+    \node[box] (cfg) {Profil\\\texttt{legacy\_f2838}};
+    \node[box, right=12mm of cfg, yshift=8mm] (a) {\datei{impmodel.slx}};
+    \node[box, right=12mm of cfg, yshift=-8mm] (b) {\datei{app\_speed.slx}};
+    \node[box, right=12mm of a] (la) {Signale A};
+    \node[box, right=12mm of b] (lb) {Signale B};
+    \node[box, right=12mm of la, yshift=-8mm] (cmp) {$\max |A - B|$\\je Signal};
+
+    \draw[sig] (cfg) -- (a); \draw[sig] (cfg) -- (b);
+    \draw[sig] (a) -- node[above]{sim} (la);
+    \draw[sig] (b) -- node[above]{sim} (lb);
+    \draw[sig] (la) -- (cmp); \draw[sig] (lb) -- (cmp);
+  \end{tikzpicture}
+  \caption{Ablauf des Äquivalenznachweises mit \skript{foc\_check\_equivalence}}
+  \label{fig:aequivalenz}
+\end{figure}
+
+Gefordert ist eine Abweichung von exakt null, nicht eine Abweichung unterhalb einer
+Toleranz. Diese Forderung ist erfüllbar, weil beide Modelle dieselben Blöcke mit denselben
+Parametern, Datentypen und Abtastzeiten enthalten und Simulink deterministisch rechnet.
+Jede Abweichung, auch in der letzten Gleitkommastelle, weist deshalb auf eine tatsächliche
+Änderung hin.
+
+\subsection{Ergebnis}
+
+\Cref{tab:aequivalenz} zeigt das Ergebnis für den Stand P1a. Alle zwölf Signale stimmen
+in jedem Abtastwert exakt überein. Erfasst sind damit die Schnittstellen zwischen den
+Komponenten in beiden Abtastraten sowie die Größen des Streckenmodells.
+
+\begin{table}[htbp]
+  \centering
+  \caption{Äquivalenznachweis für den Stand P1a (Profil \texttt{legacy\_f2838},
+    \SI{0,5}{\second} Simulation)}
+  \label{tab:aequivalenz}
+  \small
+  \begin{tabular}{@{}llrr@{}}
+    \toprule
+    Komponente & Ausgang & Werte & $\max |A - B|$ \\
+    \midrule
+    Input Controller & 1 (Sollwert) & 51 & 0 \\
+                     & 2--6 (Zustandssignale) & je 3 & 0 \\
+    Speed Control & 1 ($\boldsymbol{i}_{dq,\mathrm{ref}}$) & 2002 & 0 \\
+                  & 2 (Freemode) & 1001 & 0 \\
+    Torque Controller & 1 (Drehzahl) & 10001 & 0 \\
+                      & 2 (Tastgrade) & 30003 & 0 \\
+    Plant Model & 1 (Phasenströme) & 40002 & 0 \\
+                & 2 (mech. Lage) & 20001 & 0 \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\subsection{Wiederholung nach späteren Änderungen}
+
+Der Äquivalenznachweis wurde nicht nur einmal geführt, sondern nach jeder späteren Änderung
+an \texttt{focLib} oder \texttt{app\_speed} wiederholt. Das ist möglich, weil jede neue
+Funktion im Profil \texttt{legacy\_f2838} so parametriert ist, dass sie das Verhalten des
+Altmodells reproduziert (\cref{sec:referenz}): Neue Grenzwerte erhalten dort die alten
+Werte, neue Schutzfunktionen sind abgeschaltet.
+
+Eine Ausnahme bilden die korrigierten Regler aus \cref{ch:regler}. Ihre Struktur ändert sich
+(Integralanteil, Begrenzung), sodass sie sich nicht über einen Parameter auf das alte
+Verhalten zurückschalten lassen. Für diesen Fall überträgt \skript{foc\_equivalence\_p1a}
+die Parameter der drei PID-Blöcke aus dem Altmodell nur im Arbeitsspeicher in die
+Bibliothek, führt den Vergleich aus und schließt die Bibliothek ohne Speichern. Damit wird
+nachgewiesen, dass sich die übrigen Änderungen neutral verhalten, ohne die Korrektur
+rückgängig zu machen. Die Protokolle dieser Wiederholungen liegen jeweils beim Bericht des
+betreffenden Schritts.
+
+\offen{Quelle für Simulink ist deterministisch}
+
