@@ -82,4 +82,16 @@ Für 1333 rpm ist das Kriterium ebenfalls erfüllt (10 min, keine Aussetzer).
   - `foc_test_protection` ALL PASSED
   - `test_protocol` mit neuen Fällen (2000 rpm → Stufe 2, 5000 rpm → Stufe 3 und Ref 1,0, Poti-Betrieb reicht Stufe 2 durch)
   - `foc_codegen` 0 Warnungen. Der erste Lauf meldete wieder fälschlich „Dirty“, der zweite lief sauber.
-- **Hardware:** noch offen. 10 min mit Soll 2000 rpm.
+
+### 10-min-Lauf mit 2000 rpm nach der Behebung (2026-11-24, Stand 51d0544)
+
+Daten: `data/09_Z2_Lauf2000b_10min.zip`, `img/09_Z2_Lauf2000b_10min.png`. Start mit erst USB, dann Netzteil.
+
+| Größe | Ergebnis |
+|---|---|
+| Laufzeit, Fehler | 600 s, kein Fehler, danach READY |
+| Drehzahl (t = 3 s bis Ende) | Mittel **2000,0 rpm**, Std 27,2 rpm, 1929–2064 rpm |
+| Sprünge > 1,3 × Median | **0** im Lauf. Die Auswertung über die ganze Datei zeigt 1 Sprung bei t = 0,35 s im Anlauf |
+| Hall | 481 348 Wechsel, 0 ungültige Zustände. 2 „unzulässige“ Übergänge: 3→5 bei t = 0,34 s (Anlaufruck) und 2→1 bei t = 167,30 s. Der zweite fällt in eine Telemetrielücke von 0,13 s (CAN, 256 Abtastungen verloren), dazwischen fehlen Hall-Wechsel. Er ist also kein Sensorfehler |
+
+**Bewertung:** Die Stufenwahl wirkt, der Antrieb erreicht 2000 rpm. Damit ist Zielkriterium 2 bei 1000 und 2000 rpm erfüllt: je 10 min ohne Hall-Aussetzer.
