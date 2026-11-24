@@ -32,3 +32,21 @@ Lauf mit 1000 rpm, 60 s, 2 kHz Telemetrie ohne Lücken (`data/09_E_Lauf1000.csv`
 Noch offen:
 - 10-min-Lauf bei 1000 und 2000 rpm für Zielkriterium 2. Der frühere Stand lag bei 1 Sprung je ≈ 54 s.
 - Mit 60 s ohne Sprung ist eine Verbesserung wahrscheinlich, aber statistisch noch nicht belegt.
+
+## Zielkriterium 2: 10-min-Lauf 1000 rpm (2026-11-24, Stand 89b56b1)
+
+`focp_test run 1000 600 speed,hall_state 10 ... --freigabe`, 2 kHz. Daten: `data/09_Z2_Lauf1000_10min.zip` (CSV 21 MB, gepackt 2,5 MB), Plot `img/09_Z2_Lauf1000_10min.png`.
+
+| Größe | Ergebnis |
+|---|---|
+| Laufzeit, Fehler | 600 s, kein Fehler, Antrieb danach READY |
+| Drehzahl (t = 3 s bis Ende) | Mittel **1000,0 rpm**, Std 13,6 rpm, 963,8–1034,2 rpm |
+| Sprünge > 1,3 × Median | **0** (vorher ≈ 1 je 54 s, in 10 min also ≈ 11 zu erwarten) |
+| Hall | 240 700 Wechsel, 0 ungültige Zustände. 1 unzulässiger Übergang (5→6) bei t = 0,33 s im Anlaufruck aus dem Stand, im Lauf **keiner** |
+| Telemetrie | 768 von 1,2 Mio. Abtastungen verloren (CAN), größte Lücke 0,13 s |
+
+**Bewertung:** Für 1000 rpm ist das Kriterium „10 min ohne Hall-Aussetzer“ erfüllt.
+
+Hinweis zur CSV: `Device::exportCsv` schreibt die Zeit mit 6 signifikanten Stellen (ab 100 s nur noch ms-Auflösung). Für die Auswertung genügt das, weil die Abtastungen in fester Folge vorliegen. Für lange Aufnahmen sollte der Export die Zeit mit mehr Stellen schreiben (Änderung in `host/core`, nur auf Anweisung).
+
+Offen: der gleiche Lauf bei 2000 rpm.

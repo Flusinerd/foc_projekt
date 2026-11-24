@@ -157,6 +157,14 @@ static bool saveCsv(Device& d, const char* path)
     return true;
 }
 
+// Ring buffer for the whole recording (default 200000 samples = 100 s at 2 kHz), 10 % margin.
+static size_t scopeCapacity(const Device& d, double seconds, int div)
+{
+    const double hz = d.telemetryBaseHz() / (div > 0 ? div : 1);
+    const size_t n = static_cast<size_t>(seconds * hz * 1.1) + 1000;
+    return n > 200000 ? n : 200000;
+}
+
 static int usage()
 {
     std::fprintf(stderr,
@@ -245,7 +253,7 @@ int main(int argc, char** argv)
     } else if (cmd == "record" && a.size() == 5) {
         std::vector<int> sig;
         if (!parseSignals(a[1], sig)) return 2;
-        dev.configureScope(sig, static_cast<uint16_t>(std::atoi(a[2])));
+        dev.configureScope(sig, static_cast<uint16_t>(std::atoi(a[2])), scopeCapacity(dev, std::atof(a[3]), std::atoi(a[2])));
         dev.runScope(true);
         recordLoop(dev, std::atof(a[3]), seq, false);
         dev.runScope(false);
@@ -257,14 +265,14 @@ int main(int argc, char** argv)
         if (std::fabs(rpm) > 3000.0f) { std::fprintf(stderr, "Drehzahl auf +/-3000 rpm begrenzt\n"); return 2; }
         std::vector<int> sig;
         if (!parseSignals(a[3], sig)) return 2;
-        waitFor([&] { const auto s = dev.status(); return s.state != FOCP_ST_INIT && s.state != FOCP_ST_OFFSET_CAL; }, 3000ms);
+        waitFor([&] { const auto s = dev.status(); return s.state == FOCP_ST_READY || s.state == FOCP_ST_FAULT; }, 3000ms);   // RUN = potentiometer mode until FOCP takes over
         printLog(dev, seq);
         const auto st = dev.status();
         if (st.state != FOCP_ST_READY || st.faults) {
             std::fprintf(stderr, "Antrieb nicht bereit (%s, Fehler 0x%04X) - erst 'ack'\n", focp_state_name(st.state), st.faults);
             return 1;
         }
-        dev.configureScope(sig, static_cast<uint16_t>(std::atoi(a[4])));
+        dev.configureScope(sig, static_cast<uint16_t>(std::atoi(a[4])), scopeCapacity(dev, std::atof(a[2]) + 2.0, std::atoi(a[4])));
         dev.runScope(true);
         std::this_thread::sleep_for(300ms);       // a little standstill before the start
         dev.setReference(rpm);
