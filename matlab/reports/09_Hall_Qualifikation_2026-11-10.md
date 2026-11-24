@@ -67,3 +67,19 @@ Daten: `data/09_Z2_Lauf2000_10min.zip`, `img/09_Z2_Lauf2000_10min.png`.
 - FOC Studio und `focp_test` erfahren davon nichts. Die Begrenzung ist für den Bediener nicht sichtbar.
 
 Für 1333 rpm ist das Kriterium ebenfalls erfüllt (10 min, keine Aussetzer).
+
+### Behebung: speedMode im FOCP-Betrieb (2026-11-24)
+
+- **Firmware** (`focp_c28x_step`, neuer Ausgang `mode_out`): Im Poti-Betrieb reicht sie speedMode von CAN 0x102 durch. Im FOCP-Betrieb wählt sie die kleinste Stufe 1..3, deren Bereich floor(N_base/3)·Stufe den Sollwert abdeckt, und rechnet den Sollwert auf diese Stufe um. Über 3999 rpm wird weiterhin gekappt.
+- **Modell** (`tools/foc_focp_speedmode.m`):
+  - FOCP Service hat den 4. Ausgang `mode_out`, in der Simulation gleich dem Eingang.
+  - Neuer Ausgang `FOCP/speedMode_out` führt zum Eingang 6 von Speed Control, statt bisher von Rate Transition4.
+  - Ausgabe: vorher `Speed Control/speedMode <- app_speed/Rate Transition4:1, FOCP Ausgaenge 2`, nachher `<- app_speed/FOCP:3, FOCP Ausgaenge 3`.
+- **Nachweise:**
+  - `test_config` ALL PASSED
+  - `foc_equivalence_p1a` identisch
+  - MIL 4/4
+  - `foc_test_protection` ALL PASSED
+  - `test_protocol` mit neuen Fällen (2000 rpm → Stufe 2, 5000 rpm → Stufe 3 und Ref 1,0, Poti-Betrieb reicht Stufe 2 durch)
+  - `foc_codegen` 0 Warnungen. Der erste Lauf meldete wieder fälschlich „Dirty“, der zweite lief sauber.
+- **Hardware:** noch offen. 10 min mit Soll 2000 rpm.

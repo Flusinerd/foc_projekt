@@ -257,38 +257,56 @@ static void testTargetBinding()
 static void testC28xGlue()
 {
     std::puts("app_speed glue (focp_c28x)");
-    uint16_t active = 9, fm = 9; float ref = -1.0f;
+    uint16_t active = 9, fm = 9, mode = 0; float ref = -1.0f;
     const float z[2] = {0.0f, 0.0f};
     focp_tune_cur_Kp = 1.0308f;   // datasheet values in PU (model ExportedGlobal on the target)
     focp_tune_iq_max = 0.1f;
     focp_c28x_reset();
     // no FOCP traffic: potentiometer mode
-    focp_c28x_step(0, 0, 0, 0, 1, 1, 0.0f, 4000.0f, 24.0f, z, 56.0f, 13.856f, 30.0f, 3, 15.0f, 3.0f, &active, &fm, &ref);
+    focp_c28x_step(0, 0, 0, 0, 1, 1, 0.0f, 4000.0f, 24.0f, z, 56.0f, 13.856f, 30.0f, 3, 15.0f, 3.0f, &active, &fm, &ref, &mode);
     CHECK(active == 0 && fm == 1);                    // Freemode until the protection is armed (500 ms)
-    for (int i = 0; i < 1000; ++i) focp_c28x_step(0, 0, 0, 0, 1, 1, 0.0f, 4000.0f, 24.0f, z, 56.0f, 13.856f, 30.0f, 3, 15.0f, 3.0f, &active, &fm, &ref);
-    CHECK(active == 0 && fm == 0);
+    for (int i = 0; i < 1000; ++i) focp_c28x_step(0, 0, 0, 0, 1, 1, 0.0f, 4000.0f, 24.0f, z, 56.0f, 13.856f, 30.0f, 3, 15.0f, 3.0f, &active, &fm, &ref, &mode);
+    CHECK(active == 0 && fm == 0 && mode == 1);
+    focp_c28x_step(0, 0, 0, 0, 1, 2, 0.0f, 4000.0f, 24.0f, z, 56.0f, 13.856f, 30.0f, 3, 15.0f, 3.0f, &active, &fm, &ref, &mode);
+    CHECK(mode == 2);                                 // potentiometer mode: speedMode from CAN 0x102 passes through
     // SET_REF 666 rpm (speedMode 1: span floor(4000/3) = 1333 rpm) -> FOCP mode, Freemode until ENABLE
     focp_msg_t m; uint16_t raw[8];
     focp_build_cmd_f32(&m, 1, FOCP_CMD_SET_REF, 666.5f);
     for (int i = 0; i < 8; ++i) raw[i] = m.data[i];
     focp_target_rx_can(0x201, raw, m.len);
-    focp_c28x_step(0, 0, 0, 0, 1, 1, 0.0f, 4000.0f, 24.0f, z, 56.0f, 13.856f, 30.0f, 3, 15.0f, 3.0f, &active, &fm, &ref);
-    CHECK(active == 1 && fm == 1 && std::fabs(ref - 0.5f) < 1e-6f);
+    focp_c28x_step(0, 0, 0, 0, 1, 1, 0.0f, 4000.0f, 24.0f, z, 56.0f, 13.856f, 30.0f, 3, 15.0f, 3.0f, &active, &fm, &ref, &mode);
+    CHECK(active == 1 && fm == 1 && std::fabs(ref - 0.5f) < 1e-6f && mode == 1);
+    // FOCP chooses the speedMode: 2000 rpm -> mode 2 (span 2666), 5000 rpm -> mode 3, clamped to 1.0
+    focp_build_cmd_f32(&m, 1, FOCP_CMD_SET_REF, 2000.0f);
+    for (int i = 0; i < 8; ++i) raw[i] = m.data[i];
+    focp_target_rx_can(0x201, raw, m.len);
+    focp_c28x_step(0, 0, 0, 0, 1, 1, 0.0f, 4000.0f, 24.0f, z, 56.0f, 13.856f, 30.0f, 3, 15.0f, 3.0f, &active, &fm, &ref, &mode);
+    CHECK(mode == 2 && std::fabs(ref - 2000.0f / 2666.0f) < 1e-5f);
+    focp_build_cmd_f32(&m, 1, FOCP_CMD_SET_REF, 5000.0f);
+    for (int i = 0; i < 8; ++i) raw[i] = m.data[i];
+    focp_target_rx_can(0x201, raw, m.len);
+    focp_c28x_step(0, 0, 0, 0, 1, 1, 0.0f, 4000.0f, 24.0f, z, 56.0f, 13.856f, 30.0f, 3, 15.0f, 3.0f, &active, &fm, &ref, &mode);
+    CHECK(mode == 3 && ref == 1.0f);
+    focp_build_cmd_f32(&m, 1, FOCP_CMD_SET_REF, 666.5f);
+    for (int i = 0; i < 8; ++i) raw[i] = m.data[i];
+    focp_target_rx_can(0x201, raw, m.len);
+    focp_c28x_step(0, 0, 0, 0, 1, 1, 0.0f, 4000.0f, 24.0f, z, 56.0f, 13.856f, 30.0f, 3, 15.0f, 3.0f, &active, &fm, &ref, &mode);
+    CHECK(mode == 1 && std::fabs(ref - 0.5f) < 1e-6f);
     focp_build_cmd(&m, 1, FOCP_CMD_ENABLE); raw[0] = m.data[0];
     focp_target_rx_can(0x201, raw, 1);
-    focp_c28x_step(0, 0, 0, 0, 1, 1, 0.0f, 4000.0f, 24.0f, z, 56.0f, 13.856f, 30.0f, 3, 15.0f, 3.0f, &active, &fm, &ref);
+    focp_c28x_step(0, 0, 0, 0, 1, 1, 0.0f, 4000.0f, 24.0f, z, 56.0f, 13.856f, 30.0f, 3, 15.0f, 3.0f, &active, &fm, &ref, &mode);
     CHECK(active == 1 && fm == 0);
     // no heartbeat for > comm.timeout_ms (500 ms = 1000 steps) -> Freemode, ENABLE refused until ACK_FAULT
-    for (int i = 0; i < 1100; ++i) focp_c28x_step(0, 0, 0, 0, 1, 1, 0.0f, 4000.0f, 24.0f, z, 56.0f, 13.856f, 30.0f, 3, 15.0f, 3.0f, &active, &fm, &ref);
+    for (int i = 0; i < 1100; ++i) focp_c28x_step(0, 0, 0, 0, 1, 1, 0.0f, 4000.0f, 24.0f, z, 56.0f, 13.856f, 30.0f, 3, 15.0f, 3.0f, &active, &fm, &ref, &mode);
     CHECK(fm == 1);
     focp_target_rx_can(0x201, raw, 1);
-    focp_c28x_step(0, 0, 0, 0, 1, 1, 0.0f, 4000.0f, 24.0f, z, 56.0f, 13.856f, 30.0f, 3, 15.0f, 3.0f, &active, &fm, &ref);
+    focp_c28x_step(0, 0, 0, 0, 1, 1, 0.0f, 4000.0f, 24.0f, z, 56.0f, 13.856f, 30.0f, 3, 15.0f, 3.0f, &active, &fm, &ref, &mode);
     CHECK(fm == 1);
     focp_build_cmd(&m, 1, FOCP_CMD_ACK_FAULT); raw[0] = m.data[0];
     focp_target_rx_can(0x201, raw, 1);
     focp_build_cmd(&m, 1, FOCP_CMD_ENABLE); raw[0] = m.data[0];
     focp_target_rx_can(0x201, raw, 1);
-    focp_c28x_step(0, 0, 0, 0, 1, 1, 0.0f, 4000.0f, 24.0f, z, 56.0f, 13.856f, 30.0f, 3, 15.0f, 3.0f, &active, &fm, &ref);
+    focp_c28x_step(0, 0, 0, 0, 1, 1, 0.0f, 4000.0f, 24.0f, z, 56.0f, 13.856f, 30.0f, 3, 15.0f, 3.0f, &active, &fm, &ref, &mode);
     CHECK(fm == 0);
     // STATUS frames were queued (0x231)
     uint32_t id = 0; uint16_t d[8], len = 0; bool status = false;
@@ -309,10 +327,10 @@ static void testC28xGlue()
     CHECK(std::fabs(focp_tune_iq_max - 0.05f) < 1e-5f);
     // LOAD_DEFAULTS restores the compiled value, not the table default
     focp_build_cmd(&m, 1, FOCP_CMD_LOAD_DEFAULTS); raw[0] = m.data[0];
-    focp_c28x_step(0, 0, 0, 0, 1, 1, 0.0f, 4000.0f, 24.0f, z, 56.0f, 13.856f, 30.0f, 3, 15.0f, 3.0f, &active, &fm, &ref);
+    focp_c28x_step(0, 0, 0, 0, 1, 1, 0.0f, 4000.0f, 24.0f, z, 56.0f, 13.856f, 30.0f, 3, 15.0f, 3.0f, &active, &fm, &ref, &mode);
     focp_build_cmd(&m, 1, FOCP_CMD_DISABLE); raw[0] = m.data[0];
     focp_target_rx_can(0x201, raw, 1);
-    focp_c28x_step(0, 0, 0, 0, 1, 1, 0.0f, 4000.0f, 24.0f, z, 56.0f, 13.856f, 30.0f, 3, 15.0f, 3.0f, &active, &fm, &ref);
+    focp_c28x_step(0, 0, 0, 0, 1, 1, 0.0f, 4000.0f, 24.0f, z, 56.0f, 13.856f, 30.0f, 3, 15.0f, 3.0f, &active, &fm, &ref, &mode);
     focp_build_cmd(&m, 1, FOCP_CMD_LOAD_DEFAULTS); raw[0] = m.data[0];
     focp_target_rx_can(0x201, raw, 1);
     CHECK(std::fabs(focp_tune_iq_max - 0.1f) < 1e-6f);
@@ -321,7 +339,7 @@ static void testC28xGlue()
     CHECK(std::fabs(focp_target_param(FOCP_P_INV_UDC_MAX) - focp_tune_udc_max) < 1e-6f);
     while (focp_target_tx_pop(&id, d, &len)) {}
     for (int i = 0; i < 250; ++i)
-        focp_c28x_step(0, 1, 0, 0, 1, 1, 0.0f, 4000.0f, 31.0f, z, 56.0f, 13.856f, 30.0f, 3, 15.0f, 3.0f, &active, &fm, &ref);
+        focp_c28x_step(0, 1, 0, 0, 1, 1, 0.0f, 4000.0f, 31.0f, z, 56.0f, 13.856f, 30.0f, 3, 15.0f, 3.0f, &active, &fm, &ref, &mode);
     bool ov = false;
     while (focp_target_tx_pop(&id, d, &len))
         ov = ov || (id == 0x231 && (d[2] & FOCP_FAULT_OVERVOLTAGE));
@@ -331,7 +349,7 @@ static void testC28xGlue()
     auto statusFaults = [&]() {
         uint16_t f = 0;
         for (int i = 0; i < 250; ++i)
-            focp_c28x_step(0, 0, 0, 0, 1, 1, 0.0f, 4000.0f, 24.0f, z, 56.0f, 13.856f, 30.0f, 3, 15.0f, 3.0f, &active, &fm, &ref);
+            focp_c28x_step(0, 0, 0, 0, 1, 1, 0.0f, 4000.0f, 24.0f, z, 56.0f, 13.856f, 30.0f, 3, 15.0f, 3.0f, &active, &fm, &ref, &mode);
         while (focp_target_tx_pop(&id, d, &len))
             if (id == 0x231) f = uint16_t(d[2] | (d[3] << 8));
         return f;
@@ -357,7 +375,7 @@ static void testC28xGlue()
 
     // I_C offset is averaged before arming; afterwards ia + ib + ic must be ~0
     focp_c28x_reset();
-    focp_c28x_step(0, 0, 0, 0, 1, 1, 0.0f, 4000.0f, 24.0f, z, 56.0f, 13.856f, 30.0f, 3, 15.0f, 3.0f, &active, &fm, &ref);
+    focp_c28x_step(0, 0, 0, 0, 1, 1, 0.0f, 4000.0f, 24.0f, z, 56.0f, 13.856f, 30.0f, 3, 15.0f, 3.0f, &active, &fm, &ref, &mode);
     for (int i = 0; i < 100; ++i) focp_c28x_isr(zero2, 0.0f, zero2, zero2, 2050);   // offset 2050 counts
     statusFaults();                                                                 // 125 ms
     for (int i = 0; i < 3; ++i) statusFaults();                                     // > 500 ms: armed
@@ -378,7 +396,7 @@ static void testC28xGlue()
     focp_c28x_reset();
     focp_c28x_host_cmpss(1);
     focp_c28x_host_cmpss(0);                          // latched, comparator inactive again
-    focp_c28x_step(0, 0, 0, 0, 1, 1, 0.0f, 4000.0f, 24.0f, z, 56.0f, 13.856f, 30.0f, 3, 15.0f, 3.0f, &active, &fm, &ref);
+    focp_c28x_step(0, 0, 0, 0, 1, 1, 0.0f, 4000.0f, 24.0f, z, 56.0f, 13.856f, 30.0f, 3, 15.0f, 3.0f, &active, &fm, &ref, &mode);
     CHECK((statusFaults() & FOCP_FAULT_OC_HW) != 0);  // 125 ms: still latched
     CHECK(active == 0 && fm == 1);                    // potentiometer mode, Freemode while tripped
     for (int i = 0; i < 4; ++i) statusFaults();       // > 500 ms
@@ -388,7 +406,7 @@ static void testC28xGlue()
     // comparator still active at arming -> not cleared, and no second automatic clear later
     focp_c28x_reset();
     focp_c28x_host_cmpss(1);
-    focp_c28x_step(0, 0, 0, 0, 1, 1, 0.0f, 4000.0f, 24.0f, z, 56.0f, 13.856f, 30.0f, 3, 15.0f, 3.0f, &active, &fm, &ref);
+    focp_c28x_step(0, 0, 0, 0, 1, 1, 0.0f, 4000.0f, 24.0f, z, 56.0f, 13.856f, 30.0f, 3, 15.0f, 3.0f, &active, &fm, &ref, &mode);
     for (int i = 0; i < 5; ++i) statusFaults();
     CHECK((statusFaults() & FOCP_FAULT_OC_HW) != 0);
     focp_c28x_host_cmpss(0);

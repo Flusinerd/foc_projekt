@@ -196,9 +196,10 @@ void focp_c28x_step(uint16_t undervoltage, uint16_t overvoltage, uint16_t freemo
                     uint16_t safe_state, uint16_t speed_mode, float speed_pu, float n_base,
                     float udc, const float *idq_ref_pu, float i_base, float v_base,
                     float temp, uint16_t hall_state, float i_trip, float i_sum_max, uint16_t *active,
-                    uint16_t *freemode, float *speed_ref)
+                    uint16_t *freemode, float *speed_ref, uint16_t *mode_out)
 {
     float arg, span, ref;
+    uint16_t mode;
     uint16_t cmd, faults, fm, k, tripped;
 
     s_i_base = i_base; s_v_base = v_base; s_n_base = n_base;
@@ -279,8 +280,18 @@ void focp_c28x_step(uint16_t undervoltage, uint16_t overvoltage, uint16_t freemo
         }
     }
 
-    /* Speed calculator in the model: N_ref = Speed_Ref * floor(N_base/3) * speedMode */
-    span = (float)((uint32_t)(n_base / 3.0f)) * (float)(speed_mode ? speed_mode : 1u);
+    /* Speed calculator in the model: N_ref = Speed_Ref * floor(N_base/3) * speedMode.
+     * Potentiometer mode keeps speedMode from CAN 0x102. In FOCP mode the firmware chooses the
+     * smallest mode whose range covers the reference (2026-11-24: with speedMode 1 from 0x102 a
+     * reference of 2000 rpm was silently limited to 1333 rpm); the model takes it from *mode_out. */
+    span = (float)((uint32_t)(n_base / 3.0f));
+    mode = speed_mode ? speed_mode : 1u;
+    if (s_active) {
+        arg = focp_target_reference();
+        mode = 1u;
+        while (mode < FOCP_C28X_SPEED_MODES && arg > span * (float)mode) ++mode;
+    }
+    span *= (float)mode;
     ref = span > 0.0f ? focp_target_reference() / span : 0.0f;
     if (ref < 0.0f) ref = 0.0f;
     if (ref > 1.0f) ref = 1.0f;
@@ -303,6 +314,7 @@ void focp_c28x_step(uint16_t undervoltage, uint16_t overvoltage, uint16_t freemo
      * matlab/reports/09_Einschalt_Trip_2026-11-20.md). */
     *freemode = (uint16_t)((s_active && !s_enabled) || tripped || s_arm_ms < TRIP_ARM_MS);
     *speed_ref = ref;
+    *mode_out = mode;
 }
 
 void focp_c28x_isr(const float *iab_pu, float pos_pu, const float *idq_pu, const float *vdq_pu,

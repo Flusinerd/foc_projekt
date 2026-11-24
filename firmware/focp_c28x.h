@@ -36,12 +36,14 @@ extern "C" {
  * Hall state (C|B|A), software overcurrent threshold in A (default for inv.I_max, used on the first step),
  * plausibility threshold for |ia+ib+ic| in A (0 = off).
  * Outputs: active (FOCP owns the reference), freemode request, speed reference 0..1
- * (same scaling as the potentiometer value Speed_Ref). */
+ * (same scaling as the potentiometer value Speed_Ref) and the speedMode to use: the input in
+ * potentiometer mode, in FOCP mode the smallest of 1..FOCP_C28X_SPEED_MODES covering the reference. */
+#define FOCP_C28X_SPEED_MODES 3u   /* availableSpeedModes: N_max = 3 * floor(N_base/3) */
 void focp_c28x_step(uint16_t undervoltage, uint16_t overvoltage, uint16_t freemode_can, uint16_t hot_temp,
                     uint16_t safe_state, uint16_t speed_mode, float speed_pu, float n_base,
                     float udc, const float *idq_ref_pu, float i_base, float v_base,
                     float temp, uint16_t hall_state, float i_trip, float i_sum_max, uint16_t *active,
-                    uint16_t *freemode, float *speed_ref);
+                    uint16_t *freemode, float *speed_ref, uint16_t *mode_out);
 
 /* Current ISR (20 kHz): [ia ib], electrical position, [id iq], [Vd Vq] in PU, raw ADC count of I_C
  * (ADCINB3). Software overcurrent and current-sum checks, fast telemetry signals, samples the
