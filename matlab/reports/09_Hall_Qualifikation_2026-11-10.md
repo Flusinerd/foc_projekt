@@ -49,4 +49,21 @@ Noch offen:
 
 Hinweis zur CSV: `Device::exportCsv` schreibt die Zeit mit 6 signifikanten Stellen (ab 100 s nur noch ms-Auflösung). Für die Auswertung genügt das, weil die Abtastungen in fester Folge vorliegen. Für lange Aufnahmen sollte der Export die Zeit mit mehr Stellen schreiben (Änderung in `host/core`, nur auf Anweisung).
 
-Offen: der gleiche Lauf bei 2000 rpm.
+
+### Lauf mit Soll 2000 rpm (2026-11-24): begrenzt auf 1333 rpm
+
+Daten: `data/09_Z2_Lauf2000_10min.zip`, `img/09_Z2_Lauf2000_10min.png`.
+
+| Größe | Ergebnis |
+|---|---|
+| Laufzeit, Fehler | 600 s, kein Fehler, 0 Abtastungen verloren |
+| Drehzahl (t = 3 s bis Ende) | Mittel **1333,0 rpm**, Std 18,1 rpm, 1286–1376 rpm |
+| Sprünge > 1,3 × Median | **0** |
+| Hall | 320 819 Wechsel, 0 ungültige Zustände, **0 unzulässige Übergänge** |
+
+**Befund:** Der Antrieb erreicht nur 1333 rpm. Das ist kein Regelfehler, sondern die Begrenzung durch `speedMode`.
+- Das Modell rechnet N_ref = Speed_Ref · floor(N_base/3) · speedMode. Die Firmware (`focp_c28x_step`) bildet den FOCP-Sollwert auf Speed_Ref 0..1 ab und begrenzt dabei auf 1.
+- `speedMode` kommt aus der alten CAN-Botschaft 0x102 der MA und steht ohne diese Botschaft auf 1. Damit gilt N_max = 1333 rpm (SW_ANF_04).
+- FOC Studio und `focp_test` erfahren davon nichts. Die Begrenzung ist für den Bediener nicht sichtbar.
+
+Für 1333 rpm ist das Kriterium ebenfalls erfüllt (10 min, keine Aussetzer).
